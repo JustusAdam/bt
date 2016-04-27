@@ -1,3 +1,12 @@
 .DS_Store
 *.pdf
 *.aux
+/_shake/
+/_build/
+*.lof
+*.log
+*.lot
+*.out
+*.toc
+*.bib
+*.xml
