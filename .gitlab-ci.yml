@@ -1,0 +1,9 @@
+image: tianon/latex
+before_script:
+- apt-get update -qq && apt-get install -y -qq haskell-platform
+- cabal update
+- cabal install shake
+script: build.sh
+artifacts:
+    paths:
+    - thesis.pdf
