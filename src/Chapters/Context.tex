@@ -1,0 +1,55 @@
+% Chapter Template
+
+\chapter{Context handling} % Main chapter title
+
+\label{ChapterContext} % Change X to a consecutive number; for referencing this chapter elsewhere, use \ref{ChapterX}
+
+%----------------------------------------------------------------------------------------
+%	SECTION 1
+%----------------------------------------------------------------------------------------
+
+\section{What is Context?}
+
+The notion of a context first emerged when I realized that it would not be sufficient for all parallel \fetch{} operators to simply be piped into an accumulator.
+An accumulator which is inserted into the program will only execute if all of its inputs, aka the request structures for all accumulated fetches, are present.
+Therefore all fetches which combine into one accumulator are required to run the same number of times.
+In a normal program the number of times a function is invoked depends on a number of ... things ... which alter the flow of control.
+In our data flow graph sections with alternate control flow will always have a point of entry and a point of exit which surround a subgraph.
+% TODO add why
+Each operator within this subgraph is considered to be \textit{in} the context.
+
+
+For simplicity we set this number to 1.
+Our context transforations will guarantee all fetch operators will execute exacly once.
+
+
+The reason for this is that a typical program contains parts which influence the flow of control in the program, such as conditionals and loops.
+If a \fetch{} operation is located inside one such structure its invocation is not guaranteed anymore.
+Accumulating parallel \fetch{} operations requires each of the requests to be present.
+For a `flat` program structure, where no conditionals and loops are present, every operator will be guaranteed to be called once, and only once for every invokation of the program/function.
+We require this property for all \fetch{} operations in order to batch them.
+We define a context as a structure in the data flow graph which may change the flow of control in the program.
+This can be something like a conditional statement which may run its branch or it may not or a mapping operation which will invoke the operators within any number of times.
+
+
+%-----------------------------------
+%	SUBSECTION 1
+%-----------------------------------
+\subsection{Definition}
+
+We define
+
+%-----------------------------------
+%	SUBSECTION 2
+%-----------------------------------
+
+\subsection{Subsection 2}
+Morbi rutrum odio eget arcu adipiscing sodales. Aenean et purus a est pulvinar pellentesque. Cras in elit neque, quis varius elit. Phasellus fringilla, nibh eu tempus venenatis, dolor elit posuere quam, quis adipiscing urna leo nec orci. Sed nec nulla auctor odio aliquet consequat. Ut nec nulla in ante ullamcorper aliquam at sed dolor. Phasellus fermentum magna in augue gravida cursus. Cras sed pretium lorem. Pellentesque eget ornare odio. Proin accumsan, massa viverra cursus pharetra, ipsum nisi lobortis velit, a malesuada dolor lorem eu neque.
+
+%----------------------------------------------------------------------------------------
+%	SECTION 2
+%----------------------------------------------------------------------------------------
+
+\section{Main Section 2}
+
+Sed ullamcorper quam eu nisl interdum at interdum enim egestas. Aliquam placerat justo sed lectus lobortis ut porta nisl porttitor. Vestibulum mi dolor, lacinia molestie gravida at, tempus vitae ligula. Donec eget quam sapien, in viverra eros. Donec pellentesque justo a massa fringilla non vestibulum metus vestibulum. Vestibulum in orci quis felis tempor lacinia. Vivamus ornare ultrices facilisis. Ut hendrerit volutpat vulputate. Morbi condimentum venenatis augue, id porta ipsum vulputate in. Curabitur luctus tempus justo. Vestibulum risus lectus, adipiscing nec condimentum quis, condimentum nec nisl. Aliquam dictum sagittis velit sed iaculis. Morbi tristique augue sit amet nulla pulvinar id facilisis ligula mollis. Nam elit libero, tincidunt ut aliquam at, molestie in quam. Aenean rhoncus vehicula hendrerit.
