@@ -10,7 +10,18 @@
 
 \section{What is Context?}
 
-The notion of a context first emerged when I realized that it would not be sufficient for all parallel \fetch{} operators to simply be piped into an accumulator.
+The notion of a context, in terms of the Ohua framework, first emerged when I realized that in ordert to allow compile time batching of IO operations control flow would have to be taken into account.
+The reference implementations of this general concet in Haskell and muse make liberal use of runtime structures and scheduling.
+This loosens the requirement for control flow awarenes.
+However we were opposed to doing more runtime operations.
+In order to properly deal with any type of control flow altering at runtime the notion of a context was born.
+
+\subsection{Definition}
+
+A context, as far as Ohua is concerned, is an `encapsulated` section of code in terms of control flow.
+Therefore the most basic context is the programs root context, the function invocation, where all opertors within are called once, and only once per function invokation.
+
+
 An accumulator which is inserted into the program will only execute if all of its inputs, aka the request structures for all accumulated fetches, are present.
 Therefore all fetches which combine into one accumulator are required to run the same number of times.
 In a normal program the number of times a function is invoked depends on a number of ... things ... which alter the flow of control.
