@@ -2,7 +2,7 @@ image: tianon/latex
 before_script:
 - for i in 1 2 3; do apt-get update -qq && apt-get install -y -qq haskell-platform && break || sleep 5; done
 - cabal update
-- cabal install shake
+- cabal install shake Chart Chart-diagrams
 build_paper:
     script: ./build.sh
     artifacts:
