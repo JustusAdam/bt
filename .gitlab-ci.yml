@@ -1,7 +1,8 @@
 image: justusadam/latex-and-stack
-before_script:
 build_paper:
-    script: stack exec -- bt
+    script:
+    - stack setup
+    - stack exec -- bt
     artifacts:
         paths:
         - thesis.pdf
