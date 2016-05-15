@@ -2,6 +2,7 @@ image: justusadam/latex-and-stack
 build_paper:
     script:
     - stack setup
+    - stack install
     - stack exec -- bt
     artifacts:
         paths:
