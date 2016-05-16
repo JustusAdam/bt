@@ -1,3 +1,5 @@
+module Main where
+
 import Development.Shake
 import Development.Shake.Command
 import Development.Shake.FilePath
@@ -7,34 +9,19 @@ import Graphics.Rendering.Chart.Easy
 import Graphics.Rendering.Chart.Backend.Diagrams
 
 
-haxlValues, ohuaValues :: [(Int, Int)]
-haxlValues =
-    [ (1, 1)
-    , (2, 1)
-    , (3, 2)
-    , (7, 3)
-    , (12, 4)
-    , (20, 5)
-    ]
-
-
-ohuaValues =
-    [ (1, 1)
-    , (2, 1)
-    , (3, 2)
-    , (7, 3)
-    , (12, 3)
-    , (20, 4)
-    ]
+haxlValues, ohuaValues, intervals :: [Int]
+haxlValues = [ 1, 1, 2, 3, 4, 5 ]
+ohuaValues = [ 1, 1, 2, 3, 3, 4 ]
+intervals =  [ 1, 2, 3, 7, 12, 20 ]
 
 
 smapRounds haxlValues ohuaValues filename =
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
-        layoutlr_title .= "Accumulator count after transform"
+        layoutlr_title .= "Number of fetch rounds"
         layoutlr_left_axis . laxis_override .= axisGridHide
         layoutlr_right_axis . laxis_override .= axisGridHide
-        plotLeft (line "haxl" [ haxlValues ])
-        plotRight (line "yauhau" [ ohuaValues ])
+        plotLeft (line "haxl" [ zip intervals haxlValues ])
+        plotRight (line "yauhau" [ zip intervals ohuaValues ])
 
 
 buildDir = "_build"
