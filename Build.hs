@@ -10,18 +10,27 @@ import Graphics.Rendering.Chart.Backend.Diagrams
 
 
 haxlValues, ohuaValues, intervals :: [Int]
-haxlValues = [ 1, 1, 2, 3, 4, 5 ]
-ohuaValues = [ 1, 1, 2, 3, 3, 4 ]
-intervals =  [ 1, 2, 3, 7, 12, 20 ]
+(intervals, haxlValues, ohuaValues) = unzip3
+    [ (0, 0, 0)
+    , (1, 1, 1)
+    , (2, 1, 1)
+    , (3, 2, 2)
+    , (7, 3, 3)
+    , (12, 4, 3)
+    , (20, 5, 4)
+    , (39, 8, 6)
+    , (60, 10, 8)
+    , (100, 15, 11)
+    ]
 
 
 smapRounds haxlValues ohuaValues filename =
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
-        layoutlr_title .= "Number of fetch rounds"
-        layoutlr_left_axis . laxis_override .= axisGridHide
-        layoutlr_right_axis . laxis_override .= axisGridHide
-        plotLeft (line "haxl" [ zip intervals haxlValues ])
-        plotRight (line "yauhau" [ zip intervals ohuaValues ])
+        layout_title .= "Transformation performance"
+        layout_x_axis . laxis_title .= "Number of nodes in the program graph"
+        layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
+        plot (line "haxl" [ zip intervals haxlValues ])
+        plot (line "yauhau" [ zip intervals ohuaValues ])
 
 
 buildDir = "_build"
@@ -34,8 +43,8 @@ plots = ["smap-rounds.eps"]
 
 buildPFD :: FilePath -> Action ()
 buildPFD out = do
-    chapters <- map (chapterDir </>) <$> getDirectoryContents (sourceDir </> chapterDir)
-    need $ [src] ++ map ((sourceDir </> "Figures") </>) plots
+    chapters <- map ((sourceDir </> chapterDir) </>) <$> getDirectoryContents (sourceDir </> chapterDir)
+    need $ src : chapters ++ map ((sourceDir </> "Figures") </>) plots
     [_, Exit e] <- replicateM 2 $ command [Cwd sourceDir] "pdflatex" ["-shell-escape", "-interaction=nonstopmode", srcRel]
     -- trackWrite [buildDir </> out]
     copyFileChanged (sourceDir </> out) out
