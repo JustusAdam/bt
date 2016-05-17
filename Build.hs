@@ -59,7 +59,7 @@ buildPFD out = do
       ++ map ((buildDir </> "Figures") </>) plots
     [_, Exit e] <- replicateM 2 $ command [Cwd buildDir] "pdflatex" ["-shell-escape", "-interaction=nonstopmode", srcRel]
     -- trackWrite [buildDir </> out]
-    copyFileChanged (sourceDir </> out) out
+    copyFileChanged (buildDir </> out) out
   where
       srcRel =  out -<.> "tex"
       src = buildDir </> srcRel
