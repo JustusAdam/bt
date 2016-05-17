@@ -10,17 +10,30 @@
 
 \section{What is Context?}
 
-The notion of a context, in terms of the Ohua framework, first emerged when I realized that in ordert to allow compile time batching of IO operations control flow would have to be taken into account.
-The reference implementations of this general concet in Haskell and muse make liberal use of runtime structures and scheduling.
-This loosens the requirement for control flow awarenes.
-However we were opposed to doing more runtime operations.
-In order to properly deal with any type of control flow altering at runtime the notion of a context was born.
+A context, as far as Ohua is concerned, is a programming construct which changes the behavior of subsequent sections of code.
+As an example the most basic context is the root context of an ohua \textt{algo} which changes the behavior of the functions within in so far as that they are executed once for each time the algo is executed.
+Another example is the \texttt{smap} context which casues functions within to be executet multiple times.
+Both of these contexts are control flow contexts which means they alter whether and how often functions are executed.
+Most contexts in ohua are represented as a pair of encapsulating operators which mark the beginning and end of the context respectively.
+The beginning marker sets up the altered behaviour and the end marker restores the original behavior.
 
-\subsection{Definition}
+In case of the \texttt{algo} context the \texttt{algo-in} as start operator starts the execution and the \texttt{algo-out} operator as end operator collects the result.
+For \texttt{smap} the \texttt{smap} operator starts by executing the algorithm within once for each element in the structure being mapped and the \texttt{collect} operator restores the old behavior by waiting for as many elements as were in the mapped structure before returning the list to the next part of the program.
 
-A context, as far as Ohua is concerned, is an `encapsulated` section of code in terms of control flow.
-Therefore the most basic context is the programs root context, the function invocation, where all opertors within are called once, and only once per function invokation.
+\subsection{The problem with context}
 
+
+Control flow altering context such as smap or if pose a problem for yauhau.
+Unlike in Haxl or Muse Yauhau uses compile time graph transformations to batch parallel fetch operations.
+However are two fetches really parallel if one of them is in an if context and may not be executed at all?
+A solution to this question could be to try and understand which fetch operations in a program are potentially parallel and use runtime scheduling to swap fetches in the accumulator.
+This would not only incur additional runtime scheduling overhead but also if fetch f and fetch g are parallel and fetch f might not get executed there is no guarantee that there is another fetch h parallel to g which can be swapped in for f.
+
+We chose a different strategy which can be implemented at compile time.
+In order to batch two fetches we must simply guarantee that they in the same (control flow) context.
+We can extend his principle and simplify by requiring all fetches in the program to be in the root context.
+
+\subsubsection{}
 
 An accumulator which is inserted into the program will only execute if all of its inputs, aka the request structures for all accumulated fetches, are present.
 Therefore all fetches which combine into one accumulator are required to run the same number of times.
@@ -53,14 +66,3 @@ We define
 %-----------------------------------
 %	SUBSECTION 2
 %-----------------------------------
-
-\subsection{Subsection 2}
-Morbi rutrum odio eget arcu adipiscing sodales. Aenean et purus a est pulvinar pellentesque. Cras in elit neque, quis varius elit. Phasellus fringilla, nibh eu tempus venenatis, dolor elit posuere quam, quis adipiscing urna leo nec orci. Sed nec nulla auctor odio aliquet consequat. Ut nec nulla in ante ullamcorper aliquam at sed dolor. Phasellus fermentum magna in augue gravida cursus. Cras sed pretium lorem. Pellentesque eget ornare odio. Proin accumsan, massa viverra cursus pharetra, ipsum nisi lobortis velit, a malesuada dolor lorem eu neque.
-
-%----------------------------------------------------------------------------------------
-%	SECTION 2
-%----------------------------------------------------------------------------------------
-
-\section{Main Section 2}
-
-Sed ullamcorper quam eu nisl interdum at interdum enim egestas. Aliquam placerat justo sed lectus lobortis ut porta nisl porttitor. Vestibulum mi dolor, lacinia molestie gravida at, tempus vitae ligula. Donec eget quam sapien, in viverra eros. Donec pellentesque justo a massa fringilla non vestibulum metus vestibulum. Vestibulum in orci quis felis tempor lacinia. Vivamus ornare ultrices facilisis. Ut hendrerit volutpat vulputate. Morbi condimentum venenatis augue, id porta ipsum vulputate in. Curabitur luctus tempus justo. Vestibulum risus lectus, adipiscing nec condimentum quis, condimentum nec nisl. Aliquam dictum sagittis velit sed iaculis. Morbi tristique augue sit amet nulla pulvinar id facilisis ligula mollis. Nam elit libero, tincidunt ut aliquam at, molestie in quam. Aenean rhoncus vehicula hendrerit.
