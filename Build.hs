@@ -2,7 +2,7 @@ module Main where
 
 import Development.Shake
 import Development.Shake.Command
-import Development.Shake.FilePath
+import Development.Shake.FilePath as SFP
 import Development.Shake.Util
 import Control.Monad (replicateM)
 import Graphics.Rendering.Chart.Easy
@@ -36,21 +36,33 @@ smapRounds haxlValues ohuaValues filename =
 buildDir = "_build"
 sourceDir = "src"
 chapterDir = "Chapters"
+appendixDir = "Appendices"
+chapters = ["Context", "Introduction", "Experiments"]
+appendices = ["AppendixA"]
+styles = ["MastersDoctoralThesis"]
 
 
 plots = ["smap-rounds.eps"]
 
 
+copyFromSrc :: FilePath -> Action ()
+copyFromSrc out = copyFileChanged (sourceDir </> dropDirectory1 out) out
+
+
 buildPFD :: FilePath -> Action ()
 buildPFD out = do
-    chapters <- map ((sourceDir </> chapterDir) </>) <$> getDirectoryContents (sourceDir </> chapterDir)
-    need $ src : chapters ++ map ((sourceDir </> "Figures") </>) plots
-    [_, Exit e] <- replicateM 2 $ command [Cwd sourceDir] "pdflatex" ["-shell-escape", "-interaction=nonstopmode", srcRel]
+    need $
+      src
+      : map (\chapter -> buildDir </> chapterDir </> chapter SFP.<.> "tex") chapters
+      ++ map (\appendix -> buildDir </> appendixDir </> appendix SFP.<.> "tex") appendices
+      ++ map (\style -> buildDir </> style SFP.<.> "cls") styles
+      ++ map ((buildDir </> "Figures") </>) plots
+    [_, Exit e] <- replicateM 2 $ command [Cwd buildDir] "pdflatex" ["-shell-escape", "-interaction=nonstopmode", srcRel]
     -- trackWrite [buildDir </> out]
     copyFileChanged (sourceDir </> out) out
   where
       srcRel =  out -<.> "tex"
-      src = sourceDir </> srcRel
+      src = buildDir </> srcRel
 
 
 main :: IO ()
@@ -64,3 +76,6 @@ main = shakeArgs shakeOptions{shakeFiles=buildDir} $ do
     "*.pdf" %> buildPFD
 
     "//smap-rounds.eps" %> smapRounds haxlValues ohuaValues
+
+    "_build//*.tex" %> copyFromSrc
+    "_build//*.cls" %> copyFromSrc
