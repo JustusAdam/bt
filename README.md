@@ -23,3 +23,7 @@ There is a preview of the compiled thesis pdf provided by the GitLab CI server. 
 - Begin working period: 31. May 2016
 - Status presentation: Mid July 2016
 - End working period: 21. August 2016
+
+## Notes
+
+- lint using this https://github.com/btford/write-good
