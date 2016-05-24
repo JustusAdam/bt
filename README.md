@@ -6,13 +6,11 @@ This repository contains the LaTeX sources for what will become my bachelor thes
 
 Because I like Haskell and I've always wanted to try the build system `shake` building this requires the following programs be installed:
 
-- PDFLaTeX
-- The Haskell platform (GHC + cabal)
-- The shake build system (`cabal install shake`)
+- A LaTeX distribution including `pdflatex`
+- The Haskell tool `stack`
 
-This list may expand if more programs become necessary for compiling graphs and images.
-
-Building the pdf is then simply a matter of running `./build.sh`.
+The libraries used are automatically installed by stack if you run `stack install`.
+You can then build the thesis by running `stack exec -- bt`.
 
 ### Preview
 
