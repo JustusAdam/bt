@@ -14,47 +14,36 @@ A context, as far as Ohua is concerned, is a programming construct which changes
 As an example the most basic context is the root context of an ohua \textt{algo} which changes the behavior of the functions within in so far as that they are executed once for each time the algo is executed.
 Another example is the \texttt{smap} context which casues functions within to be executet multiple times.
 Both of these contexts are control flow contexts which means they alter whether and how often functions are executed.
-Most contexts in ohua are represented as a pair of encapsulating operators which mark the beginning and end of the context respectively.
+Most contexts in ohua are represented as a pair of encapsulating operators which mark the beginning and end of the context respectively and the context itself influences the operators in between.
 The beginning marker sets up the altered behaviour and the end marker restores the original behavior.
 
 In case of the \texttt{algo} context the \texttt{algo-in} as start operator starts the execution and the \texttt{algo-out} operator as end operator collects the result.
-For \texttt{smap} the \texttt{smap} operator starts by executing the algorithm within once for each element in the structure being mapped and the \texttt{collect} operator restores the old behavior by waiting for as many elements as were in the mapped structure before returning the list to the next part of the program.
+For \texttt{smap} the \texttt{smap} operator starts by executing the algorithm within once for each element in the structure being mapped and the \texttt{collect} operator restores the old behavior by waiting for as many elements as were in the mapped structure before returning them collectively to the next part of the program.
 
-\subsection{The problem with context}
+\subsection{Arising problems}
 
 
 Control flow altering context such as smap or if pose a problem for yauhau.
-Unlike in Haxl or Muse Yauhau uses compile time graph transformations to batch parallel fetch operations.
-However are two fetches really parallel if one of them is in an if context and may not be executed at all?
-A solution to this question could be to try and understand which fetch operations in a program are potentially parallel and use runtime scheduling to swap fetches in the accumulator.
-This would not only incur additional runtime scheduling overhead but also if fetch f and fetch g are parallel and fetch f might not get executed there is no guarantee that there is another fetch h parallel to g which can be swapped in for f.
+The idea behind our batching transformation is to find sets of pairiwise independant fetches and replacing them with a single, accumulated (batched) fetch.
+The accumulator would execute all fetches at once and return the results back into the appropriate place in the graph.
+However it is a simple operator and has to wait for all inputs before executing.
+This would pose an issue, were one of its inputs coming from the branch of a conditional, such as if.
+If the branch in question was not selected at runtime the input to the accumulator would be missing, preventing it from executing any of the fetches.
+Similarly with the map operation smap.
+Were one of the inputs to the accumulator originating from inside an smap the input could get several values instead of just one, a situation which the naive accumulator is unable to cope with.
+As a result we need to ensure all inputs to an accumulator are present at the same time and in the same quantity.
+In turn this means each of the pairwise parallel fetches has to be called the same number of times.
+The simplest way to do this is to remove all control flow context around a fetch operation, leaving it in the root context.
+Here we are guaranteed that any fetch will only ever be executed once.
 
-We chose a different strategy which can be implemented at compile time.
-In order to batch two fetches we must simply guarantee that they in the same (control flow) context.
-We can extend his principle and simplify by requiring all fetches in the program to be in the root context.
+I should mention that there is an alternative strategy for handling this but it would require runtime scheduling.
+Scheduling offers more flexibility but at the same time also poses a substantially larger runtime overhead.
+Because of this we opted for a compile time rewrite approach.
+
+Haxl and muse both use runtime techniques to tackle this problem.
+In the case of Haxl it leverages the Haskell runtime (scheduler) whereas muse relies on a runtime AST and traversals on this AST.
 
 \subsubsection{}
-
-An accumulator which is inserted into the program will only execute if all of its inputs, aka the request structures for all accumulated fetches, are present.
-Therefore all fetches which combine into one accumulator are required to run the same number of times.
-In a normal program the number of times a function is invoked depends on a number of ... things ... which alter the flow of control.
-In our data flow graph sections with alternate control flow will always have a point of entry and a point of exit which surround a subgraph.
-% TODO add why
-Each operator within this subgraph is considered to be \textit{in} the context.
-
-
-For simplicity we set this number to 1.
-Our context transforations will guarantee all fetch operators will execute exacly once.
-
-
-The reason for this is that a typical program contains parts which influence the flow of control in the program, such as conditionals and loops.
-If a \fetch{} operation is located inside one such structure its invocation is not guaranteed anymore.
-Accumulating parallel \fetch{} operations requires each of the requests to be present.
-For a `flat` program structure, where no conditionals and loops are present, every operator will be guaranteed to be called once, and only once for every invokation of the program/function.
-We require this property for all \fetch{} operations in order to batch them.
-We define a context as a structure in the data flow graph which may change the flow of control in the program.
-This can be something like a conditional statement which may run its branch or it may not or a mapping operation which will invoke the operators within any number of times.
-
 
 %-----------------------------------
 %	SUBSECTION 1
