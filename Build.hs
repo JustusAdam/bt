@@ -37,7 +37,7 @@ buildDir = "_build"
 sourceDir = "src"
 chapterDir = "Chapters"
 appendixDir = "Appendices"
-chapters = ["Context", "Introduction", "Experiments"]
+chapters = ["Context", "Introduction", "Experiments", "DataFlow", "Rewrites"]
 appendices = ["AppendixA"]
 styles = ["MastersDoctoralThesis"]
 

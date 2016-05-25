@@ -24,7 +24,7 @@ For \texttt{smap} the \texttt{smap} operator starts by executing the algorithm w
 
 
 Control flow altering context such as smap or if pose a problem for yauhau.
-The idea behind our batching transformation is to find sets of pairiwise independant fetches and replacing them with a single, accumulated (batched) fetch.
+The idea behind our batching transformation is to find sets of pairiwise independent fetches and replacing them with a single, accumulated (batched) fetch.
 The accumulator would execute all fetches at once and return the results back into the appropriate place in the graph.
 However it is a simple operator and has to wait for all inputs before executing.
 This would pose an issue, were one of its inputs coming from the branch of a conditional, such as if.
@@ -43,15 +43,31 @@ Because of this we opted for a compile time rewrite approach.
 Haxl and muse both use runtime techniques to tackle this problem.
 In the case of Haxl it leverages the Haskell runtime (scheduler) whereas muse relies on a runtime AST and traversals on this AST.
 
-\subsubsection{}
+\subsection{Detection}
 
-%-----------------------------------
-%	SUBSECTION 1
-%-----------------------------------
-\subsection{Definition}
+In order to allow transformations as described in the following chapters which act upon and change context in the graph we must first find the contexts within the graph.
+In essence we would like to be able to reliably identify the subgraphs for each enclosing context in the graph.
 
-We define
+A simple solution would be to filter the graph for pairs of context begin and end operator and construct the set of nodes which satisfy the following conditions:
+\begin{enumerate}
+    \item The node is reachable from the begin operator
+    \item The end operator is reachable from the node
+\end{enumerate}
+The second condition is strictly not necessary since values cannot escape a surrounding context aside from through the and operator.
+Or more practically speaking if a value would escape a surrounding context without passing through the end operator the resulting program would be invalid and not executable.
 
-%-----------------------------------
-%	SUBSECTION 2
-%-----------------------------------
+This is not only very inefficient\footnote{The inefficiency stems from the fact that this approch requires a partial graph traversal for each context.} but it is also difficult to assure that contexts are detected in the right order.
+
+In order to efficiently find the correct context layout I decided to use an algorithm which labels each node in the graph with its context.
+This can be achieved with a single, partially overlapping traversal of the graph.
+The basic algorithm is a breadth first traversal\footnote{A depth first traveral should yield the same result.} through the nodes of the graph and in the direction of the edges.
+Each step of the algorithm we cosider two nodes.
+An arbitrary current node and the parent node from which it was reached.
+During each step one of the following cases may occur
+\begin{enumerate}
+    \item \textbf{The current node was not visited previosly and does not open a new context.} Label the node with the context of the parent, add it to the visited nodes and enqueue it.
+    \item \textbf{The current node was not visited previously and opens a new context.} Label the node with the context of the parent plus a new context stack frame for the newly opened context. Add it to the visited nodes and enqueue it.
+    \item \textbf{The current node was not visited previously and closes a new context.} If the context matches the topmost context stack frame (is the closing operator), label it with the parents context stack with the topmost frame popped off and enqueue it.
+    \item \textbf{The current node was previously visited and assigned a context stack \textit{shorter} than the one of the parent.} Proceed as if the node had not been visited yet.
+    \item \textbf{The current node was previously visited and assigned a context stack \textit{longer or qual} to the one of the parent.} Ignore the node.
+\end{enumerate}

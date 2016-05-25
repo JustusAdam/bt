@@ -1,0 +1,36 @@
+% Chapter Template
+
+\chapter{Selected data flow fundamentals} % Main chapter title
+
+\label{ChapterDataFlow} % Change X to a consecutive number; for referencing this chapter elsewhere, use \ref{ChapterX}
+
+%----------------------------------------------------------------------------------------
+%	SECTION 1
+%----------------------------------------------------------------------------------------
+
+\section{Graph representation}
+
+Bindings:
+
+read
+
+write
+
+\subsection{Implementation}
+
+\subsection{Interpretation}
+
+The aforementioned graph implementation can be interpreted as a directed, acyclic graph.
+The direction is given by the flow of data, from output to input.
+The graphhas to be acyclic.
+This is a restriction currently imposed by the underlying Ohua framework but it is also embraced by the algorithms in this thesis because it allows simpler implementations.
+Functions are nodes.
+I hereby mean a function as a concrete invocation including input and output bindings.
+This is in contrast to \textit{function names} which are simply labels to the node describing its functionality.
+Bindings are edges.
+Each named binding can represent or indicate multiple or no edges.
+Bindings are \textit{write once}, hence any binding may only occur once as a return value but may be used an arbitrary number of times as input value.
+As a result all edges represented by a particular binding originate from the same node.
+Furthermore the graph must be complete, as in any binding read must have previously been written.
+For each time a binding is read it represents an edge from its source node to the reading node.
+Thus a binding which is never read creates no edges.
