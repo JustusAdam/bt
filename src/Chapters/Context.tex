@@ -71,3 +71,7 @@ During each step one of the following cases may occur
     \item \textbf{The current node was previously visited and assigned a context stack \textit{shorter} than the one of the parent.} Proceed as if the node had not been visited yet.
     \item \textbf{The current node was previously visited and assigned a context stack \textit{longer or qual} to the one of the parent.} Ignore the node.
 \end{enumerate}
+
+The last case in particular hinges on the fact that contexts are always completely surrounded by their parent context.
+Or more formally if there is a context $c_0$ inside of which context $c_1$ is opened then all nodes inside $c_1$ are also in $c_0$.
+Therfore if node $n$ is reached with a context stack $s_1$ and was previously reached and labeled with the context stack $s_0$ and $|s_0| > |s_1|$ then $s_1 = s_0 + s_1' $ where $ |s_1'| > 0$.

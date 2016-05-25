@@ -2,19 +2,22 @@
 
 \chapter{Selected data flow fundamentals} % Main chapter title
 
-\label{ChapterDataFlow} % Change X to a consecutive number; for referencing this chapter elsewhere, use \ref{ChapterX}
-
-%----------------------------------------------------------------------------------------
-%	SECTION 1
-%----------------------------------------------------------------------------------------
+\label{ChapterDataFlow}
 
 \section{Graph representation}
 
-Bindings:
-
-read
-
-write
+Ohua was already using a data flow graph for its runtime execution model, but in order to implement Yauhau we also needed a (much simpler) compile time data flow graph representation.
+The ohua compiler now contains a compile time intermediate representation (IR) of the program.
+This IR encodes the data flow relationships inside the algorithm.
+It is designed to resemble the program as it would be written by a person to make it easier to read.
+The description of the graph contains two basic elements:
+\begin{enumerate}
+    \item \textbf{Bindings} are named data elements or alternatively can be interpreted as a data path. Each binding has to be unique, which means it can only be assigned to once, in which case we also speak of the \textit{creation} of the binding or of \textit{writing} the binding. However the binding may be read any number of times (including 0).
+    \item \textbf{(Stateful)Functions} are atomic pieces of code. They are characterized by a function name which doubles as a reference to the code itself, its input parameters as a list of bindings and its return values, also a list of bindings.
+    This might be more analogous to a call site or function invocation in traditional jargon.
+    If a binding is present in a parameter list we also speak of the binding being \textit{read}.
+    Is the binding present in the return value list we also speak of the binding being \textit{written} or \textit{created}\footnote{Because of the uniqueness constraint \textit{writing} and \textit{creating} are the same here.}.
+\end{enumerate}
 
 \subsection{Implementation}
 
@@ -22,7 +25,7 @@ write
 
 The aforementioned graph implementation can be interpreted as a directed, acyclic graph.
 The direction is given by the flow of data, from output to input.
-The graphhas to be acyclic.
+The graphs have to be acyclic.
 This is a restriction currently imposed by the underlying Ohua framework but it is also embraced by the algorithms in this thesis because it allows simpler implementations.
 Functions are nodes.
 I hereby mean a function as a concrete invocation including input and output bindings.

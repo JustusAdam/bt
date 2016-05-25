@@ -198,9 +198,9 @@ The acknowledgments and the people to thank go here, don't forget to include you
 
 \tableofcontents % Prints the main table of contents
 
-\listoffigures % Prints the list of figures
-
-\listoftables % Prints the list of tables
+% \listoffigures % Prints the list of figures
+%
+% \listoftables % Prints the list of tables
 
 %----------------------------------------------------------------------------------------
 %	ABBREVIATIONS
@@ -209,6 +209,7 @@ The acknowledgments and the people to thank go here, don't forget to include you
 \begin{abbreviations}{ll} % Include a list of abbreviations (a table of two columns)
 
 \textbf{IO} & \textbf{I}nput/\textbf{O}utput\\
+\textbf{IR} & \textbf{I}ntermediate \textbf{R}epresentation (of a program)\\
 
 \end{abbreviations}
 
@@ -262,6 +263,7 @@ The acknowledgments and the people to thank go here, don't forget to include you
 \newcommand{\yauhauPaperTitle}{Consise code and efficient IO with Data Flow}
 
 \include{Chapters/Introduction}
+\include{Chapters/DataFlow}
 \include{Chapters/Context}
 \include{Chapters/Rewrites}
 \include{Chapters/Experiments}
