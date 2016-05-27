@@ -1,13 +1,21 @@
-% Chapter Template
+\chapter{Handling Context in \yauhau}
 
-\chapter{Handling Context in Yauhau} % Main chapter title
+\label{ChapterRewrites}
 
-\label{ChapterRewrites} % Change X to a consecutive number; for referencing this chapter elsewhere, use \ref{ChapterX}
+\section{Anterior considerations} % TODO Find a better title
 
-%----------------------------------------------------------------------------------------
-%	SECTION 1
-%----------------------------------------------------------------------------------------
+Changes made to the program graph in \yauhau{} naturally succeed the context recognition step.
+Changes made may include removing nodes from the program graph, or inserting new nodes.
+Particularly dangerous is the insertion of new nodes, since at this stage we are not dealing with a simple list of funtions\footnote{As described in the section about the Ohua IR.} but a labeled graph with information about contexts to functions.
+Subsequent compiler steps may wish to access the context information also hence we must preserve it, though at present none such compiler steps are implemented or planned.
+Furthermore when inserting nodes we must assign correct context information to the newly inserted nodes.
 
-\section{Prequisite considerations} % Find a better title
+A simple but inefficient way would be to unlabel and relabel the graph every time we make a significant change.
+Since the labeling is not particularly cheap this seams inadvisable.
+We therefore presume the rewrite implementer to provide appropriate context labels for inserted nodes himself.
 
-Context 
+\subsection{Providing appropriate context labels}
+
+Assuring labels for nodes inserted after labeling the graph are correct is a hard problem. % TODO how hard?
+
+In the concrete use case of \yauhau{} however we can leverage additional information about the kind of nodes we insert and derive universal properties for these functions which simplify the labeling process.

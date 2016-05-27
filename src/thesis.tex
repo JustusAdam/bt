@@ -44,6 +44,9 @@ headsepline, % Uncomment to get a line under the header
 
 \usepackage{graphicx}
 
+\usepackage{listings}
+\usepackage{minted}
+
 
 \usepackage[backend=bibtex,style=authoryear,natbib=true]{biblatex} % Use the bibtex backend with the authoryear citation style (which resembles APA)
 
@@ -69,7 +72,7 @@ headsepline, % Uncomment to get a line under the header
 %	THESIS INFORMATION
 %----------------------------------------------------------------------------------------
 
-\thesistitle{Thesis Title} % Your thesis title, this is used in the title and abstract, print it elsewhere with \ttitle
+\thesistitle{Ÿauhau Extensions to Support Nested Structures, Conditionals and Functions} % Your thesis title, this is used in the title and abstract, print it elsewhere with \ttitle
 \supervisor{Sebastian \textsc{Ertel}} % Your supervisor's name, this is used in the title page, print it elsewhere with \supname
 \examiner{} % Your examiner's name, this is not currently used anywhere in the template, print it elsewhere with \examname
 \degree{Bachelor of Science} % Your degree name, this is used in the title page and abstract, print it elsewhere with \degreename
@@ -80,12 +83,17 @@ headsepline, % Uncomment to get a line under the header
 \keywords{} % Keywords for your thesis, this is not currently used anywhere in the template, print it elsewhere with \keywordnames
 \university{\href{http://tu-dresden.de}{Technische Universität Dresden}} % Your university's name and URL, this is used in the title page and abstract, print it elsewhere with \univname
 \department{\href{http://department.university.com}{Chair for Compiler Construction}} % Your department's name and URL, this is used in the title page and abstract, print it elsewhere with \deptname
-\group{\href{http://researchgroup.university.com}{Research Group Name}} % Your research group's name and URL, this is used in the title page, print it elsewhere with \groupname
-\faculty{\href{http://inf.tu-dresden.de}{Faculty for Comuter Science}} % Your faculty's name and URL, this is used in the title page and abstract, print it elsewhere with \facname
+\group{\href{http://researchgroup.university.com}{Data Flow Optimization Research Group}} % Your research group's name and URL, this is used in the title page, print it elsewhere with \groupname
+\faculty{\href{http://inf.tu-dresden.de}{Faculty for Computer Science}} % Your faculty's name and URL, this is used in the title page and abstract, print it elsewhere with \facname
 
 \hypersetup{pdftitle=\ttitle} % Set the PDF's title to your title
 \hypersetup{pdfauthor=\authorname} % Set the PDF's author to your name
 \hypersetup{pdfkeywords=\keywordnames} % Set the PDF's keywords to your keywords
+
+
+\newcommand{\fetch}{\texttt{fetch}}
+\newcommand{\yauhauPaperTitle}{There is no Applicative: Concise Code and Efficient I/O from Dataflow}
+\newcommand{\yauhau}{Ÿauhau}
 
 \begin{document}
 
@@ -176,8 +184,11 @@ headsepline, % Uncomment to get a line under the header
 \addchaptertocentry{\abstractname} % Add the abstract to the table of contents
 
 Modern large scale, distributed applications require the efficient execution of IO operations such as network or database access.
-In this thesis I expand on an idea implemented prior to this in the paper <paper> % TODO add paper
-by generalizing its rewrite algorithms as well as providing more evidence for the efficiency achieved there with experiments.
+In this thesis I expand on an idea implemented prior to this in the paper ``\yauhauPaperTitle{}''.
+The main focus is generalizing its rewrite algorithms to handle alternate flow of control as is present in mapping operations and conditionals.
+In addition to that I will provide further evidence for the efficiency achieved in \yauhau{} by conducting experiments on randomly generated program graphs comparing perfomance with existing solutions.
+To achieve a clean api in the ohua compiler there will also be considerations and implementation concerning % TODO <- bad word, find something better
+the separation between functions and algorithms in the ohua DSL.
 
 \end{abstract}
 
@@ -210,6 +221,9 @@ The acknowledgments and the people to thank go here, don't forget to include you
 
 \textbf{IO} & \textbf{I}nput/\textbf{O}utput\\
 \textbf{IR} & \textbf{I}ntermediate \textbf{R}epresentation (of a program)\\
+\textbf{DLS} & \textbf{D}omain \textbf{S}pecific \textbf{L}anguage\\
+\textbf{EDLS} & \textbf{E}mbedded \textbf{D}omain \textbf{S}pecific \textbf{L}anguage\\
+\textbf{DAG} & \textbf{D}irected \textbf{Acyclic} \textbf{G}raph\\
 
 \end{abbreviations}
 
@@ -259,8 +273,6 @@ The acknowledgments and the people to thank go here, don't forget to include you
 % Include the chapters of the thesis as separate files from the Chapters folder
 % Uncomment the lines as you write the chapters
 
-\newcommand{\fetch}{\texttt{fetch}}
-\newcommand{\yauhauPaperTitle}{Consise code and efficient IO with Data Flow}
 
 \include{Chapters/Introduction}
 \include{Chapters/DataFlow}

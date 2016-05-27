@@ -16,14 +16,32 @@ The description of the graph contains two basic elements:
     \item \textbf{(Stateful)Functions} are atomic pieces of code. They are characterized by a function name which doubles as a reference to the code itself, its input parameters as a list of bindings and its return values, also a list of bindings.
     This might be more analogous to a call site or function invocation in traditional jargon.
     If a binding is present in a parameter list we also speak of the binding being \textit{read}.
-    Is the binding present in the return value list we also speak of the binding being \textit{written} or \textit{created}\footnote{Because of the uniqueness constraint \textit{writing} and \textit{creating} are the same here.}.
+    Is the binding present in the return value list we also speak of the binding being \textit{written} or \textit{created}\footnote{Due to the uniqueness constraint \textit{writing} and \textit{creating} are the same here.}.
 \end{enumerate}
 
 \subsection{Implementation}
 
+The actual implementation of the graph is simply a list of functions. Each function is a Clojure record with fields for an optional id, the name of the function, a vector of input bindings and a binding or a vector of bindings as return values.
+
+\begin{minted}{Clojure}
+(defrecord IRFunc [id name args return])
+
+(def graph
+    [(->IRFunc nil "f" ['a 'b] 'c)
+     (->IRFunc nil "g" ['c] ['d 'e])])
+
+\end{minted}
+
+This can be interpreted like a clojure let binding using destructuring.
+
+\begin{minted}{Clojure}
+(let [c (f a b)
+      [d e] (g c)])
+\end{minted}
+
 \subsection{Interpretation}
 
-The aforementioned graph implementation can be interpreted as a directed, acyclic graph.
+The aforementioned graph implementation can be interpreted as a DAG.
 The direction is given by the flow of data, from output to input.
 The graphs have to be acyclic.
 This is a restriction currently imposed by the underlying Ohua framework but it is also embraced by the algorithms in this thesis because it allows simpler implementations.
