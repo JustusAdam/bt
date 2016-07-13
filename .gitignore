@@ -12,3 +12,5 @@
 *.xml
 *.eps
 /.stack-work/
+/midway-presentation/_build/
+/midway-presentation/save-commands.json

@@ -14,8 +14,6 @@
     - Generalised dispatch based on context type
     - Done??
 5. Remaining work
-
-<!-- TODO I forgot what else I need to do :D -->
-
+    - Write semantics
     - Optimisations
     - Experiments
