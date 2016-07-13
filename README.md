@@ -25,3 +25,4 @@ There is a preview of the compiled thesis pdf provided by the GitLab CI server. 
 ## Notes
 
 - lint using this https://github.com/btford/write-good
+- What does GHC8 do to our generated applicative code?

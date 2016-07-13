@@ -3,22 +3,31 @@
 \label{ChapterIntro}
 
 This thesis is inseparably linked to a paper written by Sebastian Ertel, Andres Goens and myself entitled ``\yauhauPaperTitle{}'' which unfortunately as of the time of writing this thesis has not been published yet.
-The paper describes a compiler plugin for the Ohua framework which automates batching costly IO operations in a data flow graph.
-This thesis intends to improve on the current implementation of this plugin, provide explanation as to why adjustments to the implemetation are necessary in the first place, document adjustments made to the Ohua core which enable the plugin to function and finally expand on the experimental evaluation started in the paper, providing comparative data for performance of our plugin against frameworks with similar functionality.
+As a result this section also contains a description of the problems we are trying to solve in the paper.
 
-\section{Fundamental Technologies}
+Modern large scale applications as found in for example online services like Faceook, Twitter and Google are highly distributed services.
+These applications compose of so called microservices, small units which are often spacially distributed and communicate via the network.
+This means that the application itself spends a large amount of time issuing network requests and processing the results.
+In order to achieve higher performance network requests are executed and processed asynchronously.
 
-This section shall serve as a reference for technologies which this thesis and its implementation is based upon.
-After this section I presume the reader to be familiar with these technologies and concepts and shall not provide further explanation.
 
-\subsection{Clojure}
 
-Clojure is a functional, dynamically typed language targeting the JVM  which we use to express the higher level algorithms in Ohua.
-Bejond that I use Clojure to implement most of the compiler internal algorithms, including those described in this thesis.
-There will occasionally be code examples to illustrate certain algorithms I am describing, those will usually be written in the Clojure language.
-
-\subsection{Ohua}
-
-Ohua is an automated parallelization framework which combines low level efficiency as provided by the JVM with high level expressions as found in the clojure programming language.
-In Ohua algorithms are implemented in the expressive clojure language and in terms of so called stateful functions, performant and state heavy java code pieces.
-Algorithms implemented in this way will can be automatically disassembled into a data flow graph and parallelized by the Ohua runtime and scheduler.
+%
+% This thesis intends to improve on the current implementation of this plugin, provide explanation as to why adjustments to the implemetation are necessary in the first place, document adjustments made to the Ohua core which enable the plugin to function and finally expand on the experimental evaluation started in the paper, providing comparative data for performance of our plugin against frameworks with similar functionality.
+%
+% \section{Fundamental Technologies}
+%
+% This section shall serve as a reference for technologies which this thesis and its implementation is based upon.
+% After this section I presume the reader to be familiar with these technologies and concepts and shall not provide further explanation.
+%
+% \subsection{Clojure}
+%
+% Clojure is a functional, dynamically typed language targeting the JVM  which we use to express the higher level algorithms in Ohua.
+% Bejond that I use Clojure to implement most of the compiler internal algorithms, including those described in this thesis.
+% There will occasionally be code examples to illustrate certain algorithms I am describing, those will usually be written in the Clojure language.
+%
+% \subsection{Ohua}
+%
+% Ohua is an automated parallelization framework which combines low level efficiency as provided by the JVM with high level expressions as found in the clojure programming language.
+% In Ohua algorithms are implemented in the expressive clojure language and in terms of so called stateful functions, performant and state heavy java code pieces.
+% Algorithms implemented in this way will can be automatically disassembled into a data flow graph and parallelized by the Ohua runtime and scheduler.
