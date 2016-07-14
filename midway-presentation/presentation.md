@@ -27,16 +27,17 @@ friendsOf :: Id -> IO Id
 ```Haskell
 commonFriends :: Id -> Id -> IO [Id]
 commonFriends x y = do
-    [fx, fy] <- batchRequest [FriendsOf x, FriendsOf y]
+    batched <- batchRequest [FriendsOf x, FriendsOf y]
+    let [fx, fy] = map unpackResponse batched
     return (intersection fx fy)
 
-data Request = FriendsOf Id
+data Request = FriendsOf Id | UserPage Id | UserAge Id | ...
 
-batchRequest :: [Request] -> IO [[Id]]
+batchRequest :: [Request] -> IO [Response]
 ```
 
 - what about batching across functions?
-- we'd also prefer requests to be asynchronous
+- what about concurrency?
 
 ## Target domain
 
@@ -163,6 +164,8 @@ Context is a property of subgraphs of a data flow graph emerging from node label
 - Inherited
 - Subgraphs enclosed in special `begin` and `end` node
 - Contexts always completely enclose nested contexts
+
+. . .
 
 > A context does not spill
 

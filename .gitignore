@@ -13,4 +13,6 @@
 *.eps
 /.stack-work/
 /midway-presentation/_build/
-/midway-presentation/save-commands.json
+/save-commands.json
+/midway-presentation/beamer/.texpadtmp/
+*.pygtex

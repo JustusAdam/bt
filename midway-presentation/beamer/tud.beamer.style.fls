@@ -1,0 +1,6 @@
+PWD /Users/justusadam/projects/bt/midway-presentation/beamer
+INPUT /usr/local/texlive/2015/texmf.cnf
+INPUT /usr/local/texlive/2015/texmf-dist/web2c/texmf.cnf
+INPUT /usr/local/texlive/2015/texmf-var/web2c/pdftex/pdflatex.fmt
+INPUT tud.beamer.style.tex
+OUTPUT tud.beamer.style.log

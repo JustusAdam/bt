@@ -1,0 +1,25 @@
+\frametitle{Muse implementation detail}
+\begin{columns}
+		\column{0.4\textwidth}
+		\begin{itemize}
+			\item Similar syntax to Haxl
+			\item fmap/<\$> (\texttt{<\$>} and \texttt{<*>}), flat-map (\texttt{>>=})
+			\item Uses free monad to build an AST
+			\item Traverses AST to find fetch rounds
+		\end{itemize}
+		\column{0.6\textwidth}
+		\begin{minted}{Clojure}
+(defn common-friends [x y]
+  (<$> intersection
+    (friends-of x)
+    (friends-of y)))
+
+(defn friends-of [x]
+  (FriendsOf. x))
+
+(defrecord FriendsOf [id]
+  MuseAST
+  (...))
+		\end{minted}
+	\end{columns}
+

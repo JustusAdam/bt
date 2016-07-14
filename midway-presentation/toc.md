@@ -17,3 +17,12 @@
     - Write semantics
     - Optimisations
     - Experiments
+
+
+- Haxl und muse implementation as appendix
+
+- Motivating example
+- Application
+- Ÿauhau
+    - Example with transformation
+- Level graphs extensions

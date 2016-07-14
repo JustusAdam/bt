@@ -1,0 +1,11 @@
+(defn common-friends [x y]
+  (<$> intersection
+    (friends-of x)
+    (friends-of y)))
+
+(defn friends-of [x]
+  (FriendsOf. x))
+
+(defrecord FriendsOf [id]
+  MuseAST
+  (...))

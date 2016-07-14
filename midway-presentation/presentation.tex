@@ -1,0 +1,394 @@
+\begin{frame}[fragile]{Title for motivation}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{commonFriends ::} \DataTypeTok{Id} \OtherTok{->} \DataTypeTok{Id} \OtherTok{->} \DataTypeTok{IO} \NormalTok{[}\DataTypeTok{Id}\NormalTok{]}
+\NormalTok{commonFriends x y }\FunctionTok{=} \KeywordTok{do}
+    \NormalTok{fx }\OtherTok{<-} \NormalTok{friendsOf x}
+    \NormalTok{fy }\OtherTok{<-} \NormalTok{friendsOf y}
+    \NormalTok{return (intersection fx fy)}
+
+\OtherTok{friendsOf ::} \DataTypeTok{Id} \OtherTok{->} \DataTypeTok{IO} \DataTypeTok{Id}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  lots of IO for a simple calculation
+\item
+  sequential IO
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{commonFriends ::} \DataTypeTok{Id} \OtherTok{->} \DataTypeTok{Id} \OtherTok{->} \DataTypeTok{IO} \NormalTok{[}\DataTypeTok{Id}\NormalTok{]}
+\NormalTok{commonFriends x y }\FunctionTok{=} \KeywordTok{do}
+    \NormalTok{batched }\OtherTok{<-} \NormalTok{batchRequest [}\DataTypeTok{FriendsOf} \NormalTok{x, }\DataTypeTok{FriendsOf} \NormalTok{y]}
+    \KeywordTok{let} \NormalTok{[fx, fy] }\FunctionTok{=} \NormalTok{map unpackResponse batched}
+    \NormalTok{return (intersection fx fy)}
+
+\KeywordTok{data} \DataTypeTok{Request} \FunctionTok{=} \DataTypeTok{FriendsOf} \DataTypeTok{Id} \FunctionTok{|} \DataTypeTok{UserPage} \DataTypeTok{Id} \FunctionTok{|} \DataTypeTok{UserAge} \DataTypeTok{Id} \FunctionTok{|} \FunctionTok{...}
+
+\OtherTok{batchRequest ::} \NormalTok{[}\DataTypeTok{Request}\NormalTok{] }\OtherTok{->} \DataTypeTok{IO} \NormalTok{[}\DataTypeTok{Response}\NormalTok{]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  what about batching across functions?
+\item
+  what about concurrency?
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Target domain}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  large scale, distributed systems (Facebook, Twitter)
+\item
+  infrastructure built on services
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Table of content}
+
+Prior work
+
+Ÿauhau and Ohua
+
+Context and control flow
+
+Unwinding context for Ÿauhau
+
+Remaining work
+
+\end{frame}
+
+\section{Prior work}\label{prior-work}
+
+\begin{frame}[fragile]{\href{https://hackage.haskell.org/package/haxl}{Haxl}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\OtherTok{commonFriends ::} \DataTypeTok{Id} \OtherTok{->} \DataTypeTok{Id} \OtherTok{->} \DataTypeTok{Fetch} \NormalTok{[}\DataTypeTok{Id}\NormalTok{]}
+\NormalTok{commonFriends x y }\FunctionTok{=} \NormalTok{intersection }\FunctionTok{<$>} \NormalTok{friendsOf x }\FunctionTok{<*>} \NormalTok{friendsOf y}
+
+\OtherTok{friendsOf ::} \DataTypeTok{Id} \OtherTok{->} \DataTypeTok{Fetch} \NormalTok{[}\DataTypeTok{Id}\NormalTok{]}
+\NormalTok{friendsOf uid }\FunctionTok{=} \NormalTok{dataFetch (}\DataTypeTok{FriendsOf} \NormalTok{uid)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  \href{https://haskell.org}{Haskell} library for automatic IO batching
+\item
+  Developed by Facebook for spam fighting
+\item
+  write simple and straight forward code and still get performant
+  results
+\item
+  uses
+  \href{https://hackage.haskell.org/package/base-4.9.0.0/docs/Control-Monad.html}{Applicative
+  Functors}
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Muse}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{(}\KeywordTok{defn}\FunctionTok{ common-friends }\NormalTok{[x y]}
+  \NormalTok{(<$> }\KeywordTok{intersection} \NormalTok{(frinds-of x) (friends-of y)))}
+
+\NormalTok{(}\KeywordTok{defn}\FunctionTok{ friends-of }\NormalTok{[x]}
+  \NormalTok{(FriendsOf. x))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  \href{https://clojure.org}{Clojure} library reimplementing Haxl
+\item
+  Similarly relies on Applicative functors as DSL to build a custom AST
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Problems}
+
+\pause
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Unfamiliar syntax
+
+  \begin{itemize}[<+->]
+  \tightlist
+  \item
+    For Haskell programmers using applicative, rather than \texttt{do}
+  \item
+    For Clojure Applicative and Monads in general
+  \end{itemize}
+\item
+  Suboptimal results, \texttt{\textgreater{}\textgreater{}=} and
+  \texttt{do}-notation forces fetches
+\end{itemize}
+
+\note{\begin{itemize}[<+->]
+\tightlist
+\item
+  Sidenote: \texttt{ApplicativeDo}
+\end{itemize}}
+
+\end{frame}
+
+\section{Ÿauhau and Ohua}\label{uxffauhau-and-ohua}
+
+\begin{frame}[fragile]{Ÿauhau}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{(defalgo common-friends [x y]}
+   \NormalTok{(}\KeywordTok{intersection} \NormalTok{(friends-of x) (friends-of y)))}
+
+\NormalTok{(defalgo friends-of [x]}
+  \NormalTok{(fetch (mk-req x my-data-source)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  System with similar goals to Haxl and Muse
+\item
+  Also uses the Clojure language
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]
+
+\begin{block}{Write any code}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{(defalgo common-friends [x y]}
+  \NormalTok{(}\KeywordTok{let} \NormalTok{[fx (friends-of x)}
+        \NormalTok{fy (friends-of y)])}
+   \NormalTok{(}\KeywordTok{intersection} \NormalTok{x y))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  independence from code style
+\item
+  Ÿauhau's EDSL: \texttt{fetch}
+\end{itemize}
+
+\end{block}
+
+\end{frame}
+
+\begin{frame}
+
+\begin{block}{Under the hood}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Uses data flow graph transformations
+\item
+  built on \href{https://bitbucket.org/sertel/ohua}{Ohua}
+\end{itemize}
+
+\end{block}
+
+\end{frame}
+
+\begin{frame}{Ohua}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  EDSL for clojure for automatic parallelism
+\item
+  Stateful functions in Java or Clojure
+\item
+  Clojure Algorithms
+\item
+  Ohua parallelises algorithms and schedules stateful functions
+\end{itemize}
+
+\note{\begin{itemize}[<+->]
+\tightlist
+\item
+  Low level, state manipulating routines in Java (Stateful functions)
+\item
+  Stateful functions are atomic
+\item
+  High level, pure algorithms in Clojure
+\end{itemize}}
+
+\end{frame}
+
+\begin{frame}{Emerging challenges}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Naive graph transformations don't consider control flow
+\item
+  Accumulative fetches must receive inputs simultaneously
+\item
+  Generic system for capturing control flow is necessary
+\end{itemize}
+
+\end{frame}
+
+\section{Context and control flow}\label{context-and-control-flow}
+
+\begin{frame}
+
+Context is a property of subgraphs of a data flow graph emerging from
+node labels and not visible structurally.
+
+\end{frame}
+
+\begin{frame}[fragile]{Properties}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Inherited
+\item
+  Subgraphs enclosed in special \texttt{begin} and \texttt{end} node
+\item
+  Contexts always completely enclose nested contexts
+\end{itemize}
+
+\pause
+
+\begin{quote}
+A context does not spill
+\end{quote}
+
+\end{frame}
+
+\begin{frame}{Detection}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Annotating nodes during compilation
+\item
+  Building context map
+\item
+  Graph transformations must provide context information for new nodes
+\end{itemize}
+
+\end{frame}
+
+\section{Unwinding context for
+Ÿauhau}\label{unwinding-context-for-uxffauhau}
+
+\begin{frame}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Main contribution of the Thesis
+\item
+  Iterative graph transformations
+
+  \begin{itemize}[<+->]
+  \tightlist
+  \item
+    Calculate context stacks
+  \item
+    Unwind in order of descending depth
+  \end{itemize}
+\item
+  Dispatch transformation based on context type
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  General Idea: Close context before fetch, reopen afterwards
+\item
+  Uses data structures to encode the context state
+
+  \begin{itemize}[<+->]
+  \tightlist
+  \item
+    Trees for \texttt{smap}
+  \item
+    Empty fetches for \texttt{if}
+  \end{itemize}
+\end{itemize}
+
+\end{frame}
+
+\section{Remaining work}\label{remaining-work}
+
+\begin{frame}{Write semantics}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Ensuring deterministic results when using writes
+\item
+  Make algorithms dependent if writes are present
+\item
+  Seq'ing algorithms
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Optimisations}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Context rewrites are kept simple, therefore wasteful
+\item
+  Remove redundant operators
+\item
+  Coerce operators like select
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Experiments}
+
+\begin{itemize}[<+->]
+\tightlist
+\item
+  Compare our if-rewrite to Haxl and Muse
+\item
+  Evaluate performance of Smap rewrite
+\item
+  Test \texttt{ApplicativeDo}
+\end{itemize}
+
+\end{frame}

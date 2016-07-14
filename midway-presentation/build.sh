@@ -11,13 +11,6 @@ fi
 # cp images/* $BUILD_DIR/images
 
 cp style.css $BUILD_DIR
-pandoc -s -i -t revealjs \
-    --slide-level=2 \
-    -V slideNumber="\"c\"" \
-    -V controls=false \
-    -V theme=white \
-    presentation.md \
-    -o _build/index.html \
-    -V margin=0.08 \
-    --css style.css \
-    --template=template.html
+pandoc -i -t beamer \
+    -o presentation.tex \
+    presentation.md
