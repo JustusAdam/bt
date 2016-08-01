@@ -1,0 +1,48 @@
+\chapter{Ohua}
+
+\label{chapter:Ohua}
+
+Ohua is parallelisation framework implemented in Java and Clojure. 
+
+At compile time Ohua transforms the program into a dataflow graph.
+This graph is a representation of individual parts of code of the program and the data dependencies between them.
+Since Ohua currently does not support recursion this graph is a DAG.
+Nodes are atomic pieces of code which are called stateful functions.
+Edges represent data dependencies.
+Edge direction indicates return or argument.
+The return of the source node is argument to the target node.
+The return value of one stateful function may be used by multiple other stateful functions and each stateful function can have multiple inputs or none at all.
+
+This dataflow graph can then be executed by a dataflow execution runtime which dynamically schedules the nodes of the graph.
+The runtime knows about the data dependencies between the nodes of the graph and therefore can schedule independent nodes in parallel. 
+As a result we obtain automatic pipeline parallelism.
+
+
+\section{Stateful Functions}
+
+
+Stateful functions are the nodes of the Ohua dataflow graph.
+They represent atomic pieces of code which the Ohua runtime schedules.
+Stateful functions can be implemented in Java by annotating a method with \texttt{@defsfn}, or in Clojure by using the \texttt{defsfn} macro.
+Each stateful function has an associated class, which holds the internal, opaque state of the node.
+Whenever a stateful function is referenced in code in the \texttt{ohua} or \texttt{algo} macro the runtime creates a new instance of the class in which the stateful function is implemented.
+As a result invocations of the same call site of a stateful function share an opaque state.
+But different call sites do not share state implicitly.
+To share state across call sites the state parameter has to be explicitly passed as an argument.
+This ensures that state sharing is transparent to the runtime without requiring in depth knowledge about the structure of the state itself.
+
+When executing the dataflow graph the runtime dynamically executes nodes.
+As a result the precise order in which the graph is executed is indeterministic.
+However the runtime ensures that for each node the data items arrive in the correct order which preserves semantics not only in the high level algorithm but also with regards to the internal state of the stateful functions.
+
+\section{Algorithms}
+
+Algorithms express high level, parallelisable computations in Ohua.
+These algorithms are written in Clojure using the \texttt{algo} macro.
+Algorithms use and combine stateful functions to express complex computations.
+When the algorithm is executed using the \texttt{ohua} or \texttt{<-ohua} macro the algorithms Clojure code is compiled into a dataflow graph and executed by the Ohua runtime.
+
+\begin{itemize}
+	\item Yauhau is a plugin for the ohua compiler (IR -> IR transformation)
+	\item Yauhau takes advantage of data flow execution
+\end{itemize}

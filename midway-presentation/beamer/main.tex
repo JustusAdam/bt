@@ -23,6 +23,14 @@
 	\includegraphics[width=2cm]{img/cfaed.png}
 }
 
+\AtBeginSection[]
+{
+  \begin{frame}
+    \frametitle{Table of Contents}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+
 \title{Extending and completing Ÿauhau}
 \author{Justus Adam, supervised by Sebastian Ertel and Andres Goens}
 \date{\today}
@@ -53,14 +61,19 @@
 \addtocounter{framenumber}{-1}
 \begin{frame}[fragile]
 	\frametitle{Motivation}
-	
-\begin{minted}{Clojure}
-(defalgo common-friends [x y]
+
+\begingroup
+\definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
+\catcode`\@=\active
+\def@#1@{\textcolor{green(html/cssgreen)}{#1}}
+\begin{minted}[escapeinside=||]{Clojure}
+(|@defalgo@| common-friends [x y]
   (intersection (friends-of x) (friends-of y)))
 
-(defalgo friends-of [x]
+(|@defalgo@| friends-of [x]
   (fetch (mk-req (FriendsOf. x) data-source)))
 \end{minted}
+\endgroup
 \begin{itemize}
 	\item Batching, Caching and Concurrency desired
 	\item Retaining concise and straight forward code
@@ -73,7 +86,7 @@
 	\pause
 	\begin{block}{Current status}
 		\begin{itemize}[<+->]
-			\item Ÿauhau supports a base transformation on a data flow graph
+			\item Ÿauhau supports a base transformation on a dataflow graph
 			\item The structure of the graph does not reflect control flow
 		\end{itemize}
 	\end{block}
@@ -83,12 +96,12 @@
 			\item Handling control flow
 			\item Iteration/mapping with \texttt{smap}
 			\item Conditional execution with \texttt{if}
-			\item Semantics of side effects (writes), especially across algorithms
+			\item Semantics of side effects (writes)
 		\end{itemize}
 	\end{block}
 \end{frame}
 
-\begin{frame}{Table of content}	
+\begin{frame}{Table of Contents}	
 	\tableofcontents
 \end{frame}
 
@@ -96,22 +109,21 @@
 
 \begin{frame}{Application}
 	\begin{itemize}
-		\item<2-> Large scale, distributed systems
-		\item<3-> Problem first approached by Facebook for spam fighting
-		\item<4-> write simple and straight forward code and still get performant results
-		\item<5-> Haskell library Haxl\footnote{Simon Marlow, Louis Brandy, Jonathan Coens, and Jon Purdy. 2014. There is no fork: an abstraction for efficient, concurrent, and concise data access.}
-		\item<5-> Clojure library Muse\footnote{https://goo.gl/masrsz}
-		\item<5-> Scala implementation Snitch by Twitter\footnote{https://www.youtube.com/watch?v=VVpmMfT8aYw} (closed source)
+		\item Large scale, distributed systems (Facebook, Amazon, Twitter)
+		\item Haskell library Haxl\footnote{Simon Marlow, Louis Brandy, Jonathan Coens, and Jon Purdy. 2014. There is no fork: an abstraction for efficient, concurrent, and concise data access. ICFP '14.}
+		\item Clojure library Muse\footnote{Alexey Kachayev. 2015. Reinventing Haxl: Efficient, Concurrent and Concise Data Access. https://www.youtube.com/watch?v=T-oekV8Pwv8}
+		\item Scala implementation Stitch by Twitter\footnote{Jake Donham. 2014. Introducing Stitch. https://www.youtube.com/watch?v=VVpmMfT8aYw} (closed source)
+		\item Ÿauhau as an Ohua plugin\footnote{Sebastian Ertel, Andrés Goens, Justus Adam and Jeronimo Castrillon. Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow. POPL '17. In submission.}
 	\end{itemize}
 \end{frame}
 
 \section{Ÿauhau Overview}
 
-\begin{frame}{Ÿauhau Overview -- Ohua}
+\begin{frame}{Ohua}
 	\begin{itemize}[<+->]
-		\item Ÿauhau is built on Ohua
-		\item Parallelisation framework based on data flow
-		\item Stateful functions and algorithms as abstraction
+		\item Ÿauhau hooks into the Ohua\footnote{Sebastian Ertel, Christof Fetzer, and Pascal Felber. 2015. Ohua: Implicit Dataflow Programming for Concurrent Systems. PPPJ '15} compiler
+		\item Parallelisation framework based on dataflow\footnote{Arvind and David E. Culler. 1986. Dataflow architectures. In Annual review of computer science vol. 1}\footnote{J. B. Dennis. 1974. First version of a data flow procedure language. In Programming Symposium, Proceedings Colloque sur la Programmation}
+		\item Stateful functions and algorithms (\texttt{defalgo}) as abstraction
 	\end{itemize}
 \end{frame}
 
@@ -123,16 +135,22 @@
 			\item<2-> Rewrites high level algorithms
 		\end{itemize}	
 		\column{.6\textwidth}
-\begin{minted}{Clojure}
-(defalgo common-friends [x y]
+
+\begingroup
+\definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
+\catcode`\@=\active
+\def@#1@{\textcolor{green(html/cssgreen)}{#1}}
+\begin{minted}[escapeinside=||]{Clojure}
+(|@defalgo@| common-friends [x y]
   (intersection 
     (friends-of x) 
     (friends-of y)))
 
-(defalgo friends-of [x]
+(|@defalgo@| friends-of [x]
   (fetch (mk-req (FriendsOf. x) 
                  data-source)))
 \end{minted}
+\endgroup
 	\end{columns}
 	
 \end{frame}
@@ -145,7 +163,7 @@
 		\column{.4\textwidth}
 		\begin{itemize}
 			\item Rewrites high level algorithms
-			\item Operates on data flow ir
+			\item Operates on dataflow ir
 		\end{itemize}	
 		\column{.6\textwidth}
 		\begin{minted}{Clojure}
@@ -154,7 +172,7 @@
       b (mk-req (FriendsOf. y) data-source)
       c (fetch a)
       d (fetch b)
-      e (intersection a b)
+      e (intersection a b)]
   e)
 		\end{minted}
 	\end{columns}
@@ -169,8 +187,8 @@
 		\column{.4\textwidth}
 		\begin{itemize}
 			\item Rewrites high level algorithms
-			\item Operates on data flow ir
-			\item Traverses data flow graph along dependencies
+			\item Operates on dataflow ir
+			\item Traverses dataflow graph along dependencies
 			\item<2-> Collect fetches, replace with accumulator
 			\item<3-> Transformation is very simple and naive
 		\end{itemize}	
@@ -185,8 +203,7 @@
 	\begin{columns}
 		\column{0.4\textwidth}	
 		\begin{itemize}
-			\item<2-> Split inner graph around fetch
-			\item<3-> insert \texttt{collect} and \texttt{smap} around fetch
+			\item Split inner graph around fetch
 		\end{itemize}
 		\column{0.6\textwidth}
 		\includegraphics[width=\textwidth]{graphs/smap-rewrite-original}
@@ -203,22 +220,34 @@
 		\begin{itemize}
 			\item Split inner graph around fetch
 			\item insert \texttt{collect} and \texttt{smap} around fetch
-			\item Build tree of requests
+			\item<2-> Build tree of requests
 		\end{itemize}
 		\column{0.6\textwidth}
 		\includegraphics[width=\textwidth]{graphs/smap-rewrite}
 	\end{columns}
 		
 \end{frame}
+
 \section{\texttt{if} rewrite}
+
 \begin{frame}{\texttt{if} rewrite}
 	\begin{columns}
 		\column{0.4\textwidth}
 		\begin{itemize}[<+->]
 			\item Split inner graph around fetch
+		\end{itemize}
+		\column{0.6\textwidth}
+		\includegraphics[width=\textwidth]{graphs/basic-if-rewrite-original}
+	\end{columns}
+\end{frame}
+
+\begin{frame}{\texttt{if} rewrite}
+	\begin{columns}
+		\column{0.4\textwidth}
+		\begin{itemize}
+			\item Split inner graph around fetch
 			\item Replace two fetches with one being selectively given the active request
-			\item Push result to the continuation of the active branch using the initial condition
-			\item Inserts \texttt{identity} operators to preserve destructuring
+			\item<2-> Push result to the continuation of the active branch using the initial condition
 		\end{itemize}
 		\column{0.6\textwidth}
 		\includegraphics[width=\textwidth]{graphs/basic-if-rewrite}
@@ -263,24 +292,64 @@
 \end{frame}
 
 \begin{frame}{Context}
-	\begin{itemize}[<+->]
+	
+	\begin{columns}
 		
-		\item Hidden graph structures unified into context
-		\item Context is property of subgraphs emerging from node labels
-		\item Inherited property
-		\item Subcontexts are always fully enclosed
+		\column{0.4\textwidth}
+		\begin{itemize}[<+->]
+		
+			\item Hidden graph structures unified into context
+			\item Context is property of subgraphs emerging from node labels
+			\item Has a marker for begin and end
+			\item Inherited property
+			\item Subcontexts are always fully enclosed
 			
-	\end{itemize}
+		\end{itemize}
+		
+		\column{0.6\textwidth}
+		
+		\includegraphics[width=\textwidth]{graphs/context-example}
+			
+	\end{columns}
+
+
+	
 \end{frame}
 
 \begin{frame}{Finding context}
+
+	\begin{columns}
+		\column{0.4\textwidth}
 	
-	\begin{itemize}
-		\item Context recognition is done at compile time
-		\item If a context opening node is found annontate subgraph
-		\item Resolve full context stack by following the parent context references
-		\item Hinges on the ``fully enclosing'' property
-	\end{itemize}
+		\begin{itemize}[<+->]
+			\item Context recognition is done at compile time
+			\item If a context opening node is found annotate subgraph
+			\item Resolve full context stack by following the parent context references
+		\end{itemize}
+	
+		\column{0.6\textwidth}
+		
+		\includegraphics[width=\textwidth]{graphs/context-example}
+	\end{columns}
+	
+\end{frame}
+
+\begin{frame}{Finding context}
+
+	\begin{columns}
+		\column{0.4\textwidth}
+	
+		\begin{itemize}
+			\item Context recognition is done at compile time
+			\item If a context opening node is found annotate subgraph
+			\item Resolve full context stack by following the parent context references
+			\item<2-> Hinges on the ``fully enclosing'' property
+		\end{itemize}
+	
+		\column{0.6\textwidth}
+		
+		\includegraphics[width=\textwidth]{graphs/context-resolution-example}
+	\end{columns}
 	
 \end{frame}
 
@@ -300,8 +369,12 @@
 			\item Execution order depends entirely on data dependencies
 		\end{itemize}
 		\column{0.6\textwidth}
-		\begin{minted}{Clojure}
-(defalgo main []
+		\begingroup
+\definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
+\catcode`\@=\active
+\def@#1@{\textcolor{green(html/cssgreen)}{#1}}
+\begin{minted}[escapeinside=||]{Clojure}
+(|@defalgo@| main []
   (let [write-result 
         (write (WriteReq. "my-data") 
                data-source)
@@ -310,6 +383,7 @@
                data-source))]
     (compute fetch-data write-result)))
 		\end{minted}
+		\endgroup
 		
 	\end{columns}
 \end{frame}
@@ -334,8 +408,12 @@
 			\item Can be enforced using \texttt{seq} operator
 		\end{itemize}
 		\column{0.6\textwidth}
-		\begin{minted}{Clojure}
-(defalgo main []
+		\begingroup
+\definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
+\catcode`\@=\active
+\def@#1@{\textcolor{green(html/cssgreen)}{#1}}
+\begin{minted}[escapeinside=||]{Clojure}
+(|@defalgo@| main []
   (let [write-result 
         (write (WriteReq. "my-data") 
                data-source)
@@ -346,6 +424,7 @@
                       data-source)))]
     (compute enforced write-result)))
 		\end{minted}
+		\endgroup
 		
 	\end{columns}
 \end{frame}
@@ -357,22 +436,27 @@
 		\begin{itemize}
 			\item Execution order depends entirely on data dependencies
 			\item Can be enforced using \texttt{seq} operator
-			\item Not practical across algorithm boundaries
+			\item Should be implicit from data dependencies
 		\end{itemize}
 		
 		\column{0.6\textwidth}
-		\begin{minted}{Clojure}
-(defalgo does-read [x]
+		\begingroup
+\definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
+\catcode`\@=\active
+\def@#1@{\textcolor{green(html/cssgreen)}{#1}}
+\begin{minted}[escapeinside=||]{Clojure}
+(|@defalgo@| does-read [x]
   (compute 
     (fetch (mk-req (Payload. "constant") 
                    data-source)) 
     x))
-(defalgo does-write []
+(|@defalgo@| does-write []
   (write (WriteReq. "my-data") data-source)
   ...)
-(defalgo main []
+(|@defalgo@| main []
   (does-read (does-write))
 		\end{minted}
+		\endgroup
 		
 	\end{columns}
 \end{frame}
@@ -407,13 +491,20 @@
 
 \begin{frame}{Experiments and Evaluation}
 	Verifying correctness (program semantics) and performance in comparison to Haxl and Muse for:
+	
+	\pause
+	
 	\begin{enumerate}
 		\item Modularised graphs (functions/algorithms)
 		\item Graphs with map operations (\texttt{smap})
 		\item Graphs with conditionals (\texttt{if})
 	\end{enumerate}
 	
+	\pause
+	
 	This requires extensions to our random code generator to allow generation of correct code with
+	
+	\pause
 	
 	\begin{enumerate}
 		\item Randomly generated functions
@@ -424,8 +515,8 @@
 \end{frame}
 
 \begin{frame}
-	This is the end. Thank you for listening. \\ \\
-	Slides are publicly available at \href{http://static.justus.science/presentations/extending-yauhau.pdf}{http://static.justus.science/presentations/extending-yauhau.pdf}
+	The end. Thank you for listening. \\ \\
+	Slides are available at \href{http://static.justus.science/presentations/extending-yauhau.pdf}{http://static.justus.science/presentations/extending-yauhau.pdf}
 \end{frame}
 
 \appendix
@@ -476,6 +567,44 @@ friendsOf = dataFetch . FriendsOf
 (defrecord FriendsOf [id]
   MuseAST
   (...))
+		\end{minted}
+	\end{columns}
+
+\end{frame}
+
+\begin{frame}{Graphs}
+	\includegraphics[width=0.5\textwidth]{plots/baseline}
+	\includegraphics[width=0.5\textwidth]{plots/functions}
+	
+	Left: Baseline comparison. Right: Performance with functions.
+
+\end{frame}
+
+\begin{frame}{Graphs}
+	\includegraphics[width=0.5\textwidth]{plots/io-imbalance}
+	\includegraphics[width=0.5\textwidth]{plots/monad-vs-applicative}
+	
+	Left: Mixed latency data sources. Right: Performance across code styles.
+\end{frame}
+
+\begin{frame}[fragile]{Base transformation -- Details}
+	\begin{columns}
+		\column{0.4\textwidth}
+		\begin{itemize}
+			\item Simulates program execution
+			\item Maintains set of created data (bindings)
+			\item At each step `call' all non-fetch functions with satisfied inputs
+			\item If no further function can be called dispatch round
+		\end{itemize}
+		\column{0.6\textwidth}
+		\begin{minted}{Clojure}
+(let [[x y] (algo-in)
+      a (mk-req (FriendsOf. x) data-source)
+      b (mk-req (FriendsOf. y) data-source)
+      c (fetch a)
+      d (fetch b)
+      e (intersection a b)
+  e)
 		\end{minted}
 	\end{columns}
 

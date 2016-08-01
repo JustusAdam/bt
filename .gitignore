@@ -16,3 +16,5 @@
 /save-commands.json
 /midway-presentation/beamer/.texpadtmp/
 *.pygtex
+.texpadtmp
+_minted-thesis
