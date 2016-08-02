@@ -8,9 +8,11 @@
 *.lot
 *.out
 *.toc
-*.bib
+*.bib.bak
 *.xml
 *.eps
+*.fdb_latexmk
+*.fls
 /.stack-work/
 /midway-presentation/_build/
 /save-commands.json

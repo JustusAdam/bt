@@ -1,71 +1,71 @@
-\chapter{Context handling}
+\chapter{Context generalisation}
 
-\label{ChapterContext}
-
-\section{What is Context?}
-
-A context, as far as Ohua is concerned, is a programming construct which changes the behavior of subsequent sections of code.
-As an example the most basic context is the root context of an ohua \textt{algo} which changes the behavior of the functions within in so far as that they are executed once for each time the algo is executed.
-Another example is the \texttt{smap} context which casues functions within to be executet multiple times.
-Both of these contexts are control flow contexts which means they alter whether and how often functions are executed.
-Most contexts in ohua are represented as a pair of encapsulating operators which mark the beginning and end of the context respectively and the context itself influences the operators in between.
-The beginning marker sets up the altered behaviour and the end marker restores the original behavior.
-
-In case of the \texttt{algo} context the \texttt{algo-in} as start operator starts the execution and the \texttt{algo-out} operator as end operator collects the result.
-For \texttt{smap} the \texttt{smap} operator starts by executing the algorithm within once for each element in the structure being mapped and the \texttt{collect} operator restores the old behavior by waiting for as many elements as were in the mapped structure before returning them collectively to the next part of the program.
-
-\subsection{Arising problems}
-
-
-Control flow altering context such as smap or if pose a problem for yauhau.
-The idea behind our batching transformation is to find sets of pairiwise independent fetches and replacing them with a single, accumulated (batched) fetch.
-The accumulator would execute all fetches at once and return the results back into the appropriate place in the graph.
-However it is a simple operator and has to wait for all inputs before executing.
-This would pose an issue, were one of its inputs coming from the branch of a conditional, such as if.
-If the branch in question was not selected at runtime the input to the accumulator would be missing, preventing it from executing any of the fetches.
-Similarly with the map operation smap.
-Were one of the inputs to the accumulator originating from inside an smap the input could get several values instead of just one, a situation which the naive accumulator is unable to cope with.
-As a result we need to ensure all inputs to an accumulator are present at the same time and in the same quantity.
-In turn this means each of the pairwise parallel fetches has to be called the same number of times.
-The simplest way to do this is to remove all control flow context around a fetch operation, leaving it in the root context.
-Here we are guaranteed that any fetch will only ever be executed once.
-
-I should mention that there is an alternative strategy for handling this but it would require runtime scheduling.
-Scheduling offers more flexibility but at the same time also poses a substantially larger runtime overhead.
-Because of this we opted for a compile time rewrite approach.
-
-Haxl and muse both use runtime techniques to tackle this problem.
-In the case of Haxl it leverages the Haskell runtime (scheduler) whereas muse relies on a runtime AST and traversals on this AST.
-
-\subsection{Detection}
-
-In order to allow transformations as described in the following chapters which act upon and change context in the graph we must first find the contexts within the graph.
-In essence we would like to be able to reliably identify the subgraphs for each enclosing context in the graph.
-
-A simple solution would be to filter the graph for pairs of context begin and end operator and construct the set of nodes which satisfy the following conditions:
-\begin{enumerate}
-    \item The node is reachable from the begin operator
-    \item The end operator is reachable from the node
-\end{enumerate}
-The second condition is strictly not necessary since values cannot escape a surrounding context aside from through the and operator.
-Or more practically speaking if a value would escape a surrounding context without passing through the end operator the resulting program would be invalid and not executable.
-
-This is not only very inefficient\footnote{The inefficiency stems from the fact that this approch requires a partial graph traversal for each context.} but it is also difficult to assure that contexts are detected in the right order.
-
-In order to efficiently find the correct context layout I decided to use an algorithm which labels each node in the graph with its context.
-This can be achieved with a single, partially overlapping traversal of the graph.
-The basic algorithm is a breadth first traversal\footnote{A depth first traveral should yield the same result.} through the nodes of the graph and in the direction of the edges.
-Each step of the algorithm we cosider two nodes.
-An arbitrary current node and the parent node from which it was reached.
-During each step one of the following cases may occur
-\begin{enumerate}
-    \item \textbf{The current node was not visited previosly and does not open a new context.} Label the node with the context of the parent, add it to the visited nodes and enqueue it.
-    \item \textbf{The current node was not visited previously and opens a new context.} Label the node with the context of the parent plus a new context stack frame for the newly opened context. Add it to the visited nodes and enqueue it.
-    \item \textbf{The current node was not visited previously and closes a new context.} If the context matches the topmost context stack frame (is the closing operator), label it with the parents context stack with the topmost frame popped off and enqueue it.
-    \item \textbf{The current node was previously visited and assigned a context stack \textit{shorter} than the one of the parent.} Proceed as if the node had not been visited yet.
-    \item \textbf{The current node was previously visited and assigned a context stack \textit{longer or qual} to the one of the parent.} Ignore the node.
-\end{enumerate}
-
-The last case in particular hinges on the fact that contexts are always completely surrounded by their parent context.
-Or more formally if there is a context $c_0$ inside of which context $c_1$ is opened then all nodes inside $c_1$ are also in $c_0$.
-Therfore if node $n$ is reached with a context stack $s_1$ and was previously reached and labeled with the context stack $s_0$ and $|s_0| > |s_1|$ then $s_1 = s_0 + s_1' $ where $ |s_1'| > 0$.
+\label{chapter:Context}
+%
+%\section{What is Context?}
+%
+%A context, as far as Ohua is concerned, is a programming construct which changes the behavior of subsequent sections of code.
+%As an example the most basic context is the root context of an ohua \textt{algo} which changes the behavior of the functions within in so far as that they are executed once for each time the algo is executed.
+%Another example is the \texttt{smap} context which casues functions within to be executet multiple times.
+%Both of these contexts are control flow contexts which means they alter whether and how often functions are executed.
+%Most contexts in ohua are represented as a pair of encapsulating operators which mark the beginning and end of the context respectively and the context itself influences the operators in between.
+%The beginning marker sets up the altered behaviour and the end marker restores the original behavior.
+%
+%In case of the \texttt{algo} context the \texttt{algo-in} as start operator starts the execution and the \texttt{algo-out} operator as end operator collects the result.
+%For \texttt{smap} the \texttt{smap} operator starts by executing the algorithm within once for each element in the structure being mapped and the \texttt{collect} operator restores the old behavior by waiting for as many elements as were in the mapped structure before returning them collectively to the next part of the program.
+%
+%\subsection{Arising problems}
+%
+%
+%Control flow altering context such as smap or if pose a problem for yauhau.
+%The idea behind our batching transformation is to find sets of pairiwise independent fetches and replacing them with a single, accumulated (batched) fetch.
+%The accumulator would execute all fetches at once and return the results back into the appropriate place in the graph.
+%However it is a simple operator and has to wait for all inputs before executing.
+%This would pose an issue, were one of its inputs coming from the branch of a conditional, such as if.
+%If the branch in question was not selected at runtime the input to the accumulator would be missing, preventing it from executing any of the fetches.
+%Similarly with the map operation smap.
+%Were one of the inputs to the accumulator originating from inside an smap the input could get several values instead of just one, a situation which the naive accumulator is unable to cope with.
+%As a result we need to ensure all inputs to an accumulator are present at the same time and in the same quantity.
+%In turn this means each of the pairwise parallel fetches has to be called the same number of times.
+%The simplest way to do this is to remove all control flow context around a fetch operation, leaving it in the root context.
+%Here we are guaranteed that any fetch will only ever be executed once.
+%
+%I should mention that there is an alternative strategy for handling this but it would require runtime scheduling.
+%Scheduling offers more flexibility but at the same time also poses a substantially larger runtime overhead.
+%Because of this we opted for a compile time rewrite approach.
+%
+%Haxl and muse both use runtime techniques to tackle this problem.
+%In the case of Haxl it leverages the Haskell runtime (scheduler) whereas muse relies on a runtime AST and traversals on this AST.
+%
+%\subsection{Detection}
+%
+%In order to allow transformations as described in the following chapters which act upon and change context in the graph we must first find the contexts within the graph.
+%In essence we would like to be able to reliably identify the subgraphs for each enclosing context in the graph.
+%
+%A simple solution would be to filter the graph for pairs of context begin and end operator and construct the set of nodes which satisfy the following conditions:
+%\begin{enumerate}
+%    \item The node is reachable from the begin operator
+%    \item The end operator is reachable from the node
+%\end{enumerate}
+%The second condition is strictly not necessary since values cannot escape a surrounding context aside from through the and operator.
+%Or more practically speaking if a value would escape a surrounding context without passing through the end operator the resulting program would be invalid and not executable.
+%
+%This is not only very inefficient\footnote{The inefficiency stems from the fact that this approch requires a partial graph traversal for each context.} but it is also difficult to assure that contexts are detected in the right order.
+%
+%In order to efficiently find the correct context layout I decided to use an algorithm which labels each node in the graph with its context.
+%This can be achieved with a single, partially overlapping traversal of the graph.
+%The basic algorithm is a breadth first traversal\footnote{A depth first traveral should yield the same result.} through the nodes of the graph and in the direction of the edges.
+%Each step of the algorithm we cosider two nodes.
+%An arbitrary current node and the parent node from which it was reached.
+%During each step one of the following cases may occur
+%\begin{enumerate}
+%    \item \textbf{The current node was not visited previosly and does not open a new context.} Label the node with the context of the parent, add it to the visited nodes and enqueue it.
+%    \item \textbf{The current node was not visited previously and opens a new context.} Label the node with the context of the parent plus a new context stack frame for the newly opened context. Add it to the visited nodes and enqueue it.
+%    \item \textbf{The current node was not visited previously and closes a new context.} If the context matches the topmost context stack frame (is the closing operator), label it with the parents context stack with the topmost frame popped off and enqueue it.
+%    \item \textbf{The current node was previously visited and assigned a context stack \textit{shorter} than the one of the parent.} Proceed as if the node had not been visited yet.
+%    \item \textbf{The current node was previously visited and assigned a context stack \textit{longer or qual} to the one of the parent.} Ignore the node.
+%\end{enumerate}
+%
+%The last case in particular hinges on the fact that contexts are always completely surrounded by their parent context.
+%Or more formally if there is a context $c_0$ inside of which context $c_1$ is opened then all nodes inside $c_1$ are also in $c_0$.
+%Therfore if node $n$ is reached with a context stack $s_1$ and was previously reached and labeled with the context stack $s_0$ and $|s_0| > |s_1|$ then $s_1 = s_0 + s_1' $ where $ |s_1'| > 0$.
