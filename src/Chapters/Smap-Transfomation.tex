@@ -113,7 +113,7 @@ public final class RequestTreeBranch
                   .map(t -> t.buildResult(responses))
                   .collect(Collectors.toList());
     }
-    ...
+    /* omitted code */
 }
 \end{minted}
 \caption{Concrete branch}
@@ -125,9 +125,6 @@ public final class RequestTreeBranch
 \begin{minted}{Java}
 public final class Request<P, R> 
              extends RequestTree {
-    private final P payload;
-    private final IDataSource<P, R> dataSource;
-
     @Override
     public Stream<Request> getRequestsStream() {
         return Collections
@@ -141,10 +138,10 @@ public final class Request<P, R>
     buildResult(Map<Request, Object> responses) {
         return Collections.singletonList(responses.get(this));
     }
-    ...
+    /* omitted code */
 }
 \end{minted}
-
+		
 \caption{Request class}
 \label{figure:tree-impl-request-class}
 \end{figure}

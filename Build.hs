@@ -37,9 +37,7 @@ buildDir = "_build"
 sourceDir = "src"
 chapterDir = "Chapters"
 appendixDir = "Appendices"
-chapters = ["Context", "Introduction", "Experiments", "DataFlow", "Rewrites"]
-appendices = ["AppendixA"]
-styles = ["MastersDoctoralThesis"]
+styles = ["MastersDoctoralThesis.cls"]
 
 
 plots = ["smap-rounds.eps"]
@@ -49,13 +47,19 @@ copyFromSrc :: FilePath -> Action ()
 copyFromSrc out = copyFileChanged (sourceDir </> dropDirectory1 out) out
 
 
+getTexFilesFrom :: FilePath -> Action [FilePath]
+getTexFilesFrom dir = filter ((==) ".tex" . takeExtension) <$> getDirectoryContents dir
+
+
 buildPFD :: FilePath -> Action ()
 buildPFD out = do
+    chapters <- getTexFilesFrom $ sourceDir </> chapterDir
+    appendices <- getTexFilesFrom $ sourceDir </> appendixDir
     need $
       src
-      : map (\chapter -> buildDir </> chapterDir </> chapter SFP.<.> "tex") chapters
-      ++ map (\appendix -> buildDir </> appendixDir </> appendix SFP.<.> "tex") appendices
-      ++ map (\style -> buildDir </> style SFP.<.> "cls") styles
+      : map (\chapter -> buildDir </> chapterDir </> chapter) chapters
+      ++ map (\appendix -> buildDir </> appendixDir </> appendix) appendices
+      ++ map (\style -> buildDir </> style) styles
       ++ map ((buildDir </> "Figures") </>) plots
     [_, Exit e] <- replicateM 2 $ command [Cwd buildDir] "pdflatex" ["-shell-escape", "-interaction=nonstopmode", srcRel]
     -- trackWrite [buildDir </> out]
