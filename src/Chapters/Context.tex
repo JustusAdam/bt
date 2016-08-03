@@ -1,6 +1,75 @@
+%!TEX root = ../thesis.tex
 \chapter{Context generalisation}
 
-\label{chapter:Context}
+\label{ch:Context}
+
+Structures such as smap and if, which alter control flow and thus have implications on the working of the \yauhau{} base transformation do not just occur independently in code.
+As was mentioned in Chapter \ref{ch:smap-transformation} these structures can be nested.
+However even though the smap transformation correctly handles smaps nested in smaps to arbitrary depth we may also have interleaved nesting of smap and if, see Figure~\ref{fig:nested-context-example}.
+
+\begin{figure}
+\begin{minted}{Clojure}
+(defalgo algo1 [param]
+  (smap
+    (algo [val]
+      (if some-condition
+        (smap (algo )))))
+\end{minted}
+\caption{Nested context example}
+\label{fig:nested-context-example}
+\end{figure}
+
+\section{Definition}
+
+In order to handle these interleaved nestings and allow the resulting algorithm to be extensible in the future, aka allow definition of new such constructs and define ways to handle it, a general abstraction is necessary.
+The concept we decided to introduce in Ohua is called a context.
+And contexts in the Ohua sense are much more general than if or smap or even control flow structures.
+Contexts now solve an issue underlying the internal representation of the program.
+The information in a dataflow graphs is limited to data dependencies and derivable properties.
+However real programs have many properties which do not emerge structurally in a dataflow graph.
+Control flow structures such as smap and if for instance change the properties of the contained subgraph but this is not structurally visible in the graph.
+In order to determine whether a certain node has such properties we need to look and interpret the actual labels of the nodes.
+
+Context is the general name we give these not structurally emergent properties of a subgraph.
+The context type is a label which refers to the behaviour of that particular context, aka \texttt{if} or \texttt{smap}.
+An instance of a context is a concrete node in the dataflow graphs 
+
+\subsection{The stack}
+
+A context stack is a ordered list of nested contexts a node is contained in.
+
+\subsubsection{Notation}
+
+\begin{tabular}{c | l}
+  Symbol & Semantics \\ \hline
+  $c \rightarrow_{pop} c'$ & Removing the topmost element from the stack $c$ yields $c'$ \\
+  $c \rightarrow_{pop}^n c'$ & Removing the topmost $n$ elements from the stack $c$ yields $c'$ \\
+  $c \rightarrow_{pop}^* c'$ & Removing an unspecified amount of entries from the top of $c$ yields $c'$ \\
+\end{tabular}
+
+\subsubsection{Definitions}
+
+If there are two context stacks $s_1$ and $s_2$ and the successive removal of elements from the top of $s_1$ yields $s_2$, $s_1 \rightarrow_{pop} s_2$, then we say $s_1$ is \textit{nested} in $s_2$ and $s_2$ is a \textit{subcontext} of $s_1$.
+Context effects aggregate in a context stack.
+
+
+
+\subsubsection{Properties}
+
+There are a few general properties which can be asserted about contexts in the Ohua sense.
+
+\begin{itemize}
+  \item \textbf{Contexts are naturally fully enclosing.}
+        This means that in a normal program two contexts never partially overlap.
+        They are either disjoint or one is fully contained in the other.
+  \item \textbf{Contexts are an inherited property.}
+        Nodes which are not special, context changing nodes such as \texttt{smap} or \texttt{ifThenElse} inherit their context from their parents.
+        Briefly said a node N is in every context any of its parent nodes is in.
+        Since, as mentioned above, contexts do not partially contexts of parent nodes are always rooted subcontexts of one another.
+\end{itemize}
+
+We can also see that contexts are special in ohua since they are not available to the user and what I mean by that all known contexts use special dataflow operators for their implementation, because stateful functions are not powerful enough.
+
 %
 %\section{What is Context?}
 %

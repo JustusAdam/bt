@@ -37,6 +37,7 @@ buildDir = "_build"
 sourceDir = "src"
 chapterDir = "Chapters"
 appendixDir = "Appendices"
+figuresDir = "Figures"
 styles = ["MastersDoctoralThesis.cls"]
 
 
@@ -55,13 +56,16 @@ buildPFD :: FilePath -> Action ()
 buildPFD out = do
     chapters <- getTexFilesFrom $ sourceDir </> chapterDir
     appendices <- getTexFilesFrom $ sourceDir </> appendixDir
+    figures <- filter ((/=) ".graffle" . takeExtension) <$> getDirectoryContents (sourceDir </> figuresDir)
+    bibliography <- filter ((==) ".bib" .takeExtension) <$> getDirectoryContents sourceDir
     need $
       src
       : map (\chapter -> buildDir </> chapterDir </> chapter) chapters
       ++ map (\appendix -> buildDir </> appendixDir </> appendix) appendices
-      ++ map (\style -> buildDir </> style) styles
-      ++ map ((buildDir </> "Figures") </>) plots
-    [_, Exit e] <- replicateM 2 $ command [Cwd buildDir] "pdflatex" ["-shell-escape", "-interaction=nonstopmode", srcRel]
+      ++ map (buildDir </>) styles
+      ++ map ((buildDir </> "Figures") </>) figures
+      ++ map (buildDir </>) bibliography
+    Exit e <- command [Cwd buildDir] "latexmk" ["-pdf", "-shell-escape", "-interaction=nonstopmode", srcRel]
     -- trackWrite [buildDir </> out]
     copyFileChanged (buildDir </> out) out
   where
@@ -77,9 +81,12 @@ main = shakeArgs shakeOptions{shakeFiles=buildDir} $ do
         putNormal "Cleaning files in _build"
         removeFilesAfter buildDir ["//*"]
 
-    "*.pdf" %> buildPFD
+    "_build/Figures/*.pdf" %> copyFromSrc
+
+    "thesis.pdf" %> buildPFD
 
     "//smap-rounds.eps" %> smapRounds haxlValues ohuaValues
 
     "_build//*.tex" %> copyFromSrc
     "_build//*.cls" %> copyFromSrc
+    "_build//*.bib" %> copyFromSrc
