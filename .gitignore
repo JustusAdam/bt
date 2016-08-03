@@ -13,6 +13,9 @@
 *.eps
 *.fdb_latexmk
 *.fls
+*.bbl
+*.blg
+*.synctex.gz
 /.stack-work/
 /midway-presentation/_build/
 /save-commands.json

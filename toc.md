@@ -29,7 +29,7 @@
                 mycond (seq (compute-cond) data1 data2)]
             (if mycond data1 data2)))
         ```
-
+- Side effects
 - ? Subgraph prebatching optimisations for if and smap
 - ? Subgraph batching for handling of arbitrary loops
 - Code generator expansions

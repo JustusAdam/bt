@@ -1,0 +1,122 @@
+\chapter{If Transformation}
+
+\label{ch:if-transformation}
+
+\newcommand{\opite}{\texttt{ifThenElse}}
+\newcommand{\opselect}{\texttt{select}}
+
+The if construct in the Ohua framework, behaves like a curried function.
+Input to the function is a boolean value and output is either the result of computing the true or the false branch.
+Input values to the two conditional branches are curried from the outside.
+
+\section{Transformation simplified}
+
+We can apply a very similar method of decomposition as we did with smap.
+To keep the transformation simple we assume both branches to have an equal number of fetches such that always two fetches, one from each branch, can be merged together.
+If we merge one fetch from each branch we know that no matter the condition, exactly one of them is going to have input present.
+Hence if we select whichever input is present and feed it to our single, merged fetch it is guaranteed to have input no matter the condition.
+Afterwards we will ensure the output from \fetch{} is fed back into the continuation of the branch the input came from.
+
+A simple demonstration of this transformation in Haskell code.
+Both branches consist of calculations before the fetch and after the fetch and a fetch in between, see Figure \ref{fig:if-trans-code-before}.
+In order to select the present input we first bundle the before calculations into their own if construct.
+This construct now returns a request for our fetch independent of the condition.
+We feed the request to fetch.
+We use the same condition from before to select the appropriate continuation branch and call it with the value returned from the fetch, see Figure \ref{fig:if-trans-code-after}.
+As with the smap transformation this simplified model ignores the fact that not every computation can be decomposed into \texttt{after . fetch . before}, however as in smap the transformation is still correct because we are in the land of dataflow.
+In practice we only close the if or smap around the fetch itself and do not touch other parts of the graph.
+This way we preserve as much data independence as possible, which leads to more opportunities for Ohua to parallelise.
+
+\begin{figure}
+\begin{verbatim}
+if cond 
+    then afterTrue  . fetch . beforeTrue 
+    else afterFalse . fetch . beforeFalse
+\end{verbatim}
+\caption{Code before transform}
+\label{fig:if-trans-code-before}
+\begin{verbatim}
+(if cond 
+     then afterTrue 
+     else afterFalse) 
+. fetch 
+. (if cond 
+       then beforeTrue 
+       else beforeFalse)
+\end{verbatim}
+\caption{Code after transform}
+\label{fig:if-trans-code-after}
+\end{figure}
+
+We previously assumed that both branches held an equal number of fetches and that these could be paired up neatly in twos.
+However in real programs this may not be the case at all, see Figure \ref{fig:if-trans-code-uneq-before}.
+There is a simple solution to this problem.
+We solve the imbalance of fetches by inserting empty (NoOp) fetches at the front of the branch with fewer fetches, see Figure \ref{fig:if-trans-code-uneq-inserted}.
+Now we can apply the transformation as we did before, see Figure \ref{fig:if-trans-code-uneq-after}.
+This might look like we're introducing unnecessary data dependencies through the empty fetch and slowing the execution of the else branch, however our dataflow engine will detect that \texttt{const} makes the \texttt{falseBranch} data independent from the result of the fetch and execute it none the less.
+In fact the way \yauhau{} actually does this transformation the else branch will be connected only to the result of the first \opite{} operator and not at all to the result of the fetch.
+
+\begin{figure}
+\begin{verbatim}
+if cond 
+    then afterTrue . fetch . beforeTrue 
+    else falseBranch	
+\end{verbatim}
+\caption{Code with unequal number of fetches}
+\label{fig:if-trans-code-uneq-before}
+\begin{verbatim}
+if cond 
+    then afterTrue         . fetch . beforeTrue 
+    else const falseBranch . fetch . mkEmptyRequest
+\end{verbatim}
+%(if cond then afterTrue else const falseBranch) . fetch . (if cond then beforeTrue else mkEmptyRequest)
+\caption{Inserting an empty fetch}
+\label{fig:if-trans-code-uneq-inserted}
+\begin{verbatim}
+(if cond 
+     then afterTrue 
+     else const falseBranch) 
+. fetch 
+. (if cond 
+       then beforeTrue 
+       else mkEmptyRequest)
+\end{verbatim}
+\caption{Transformed code with unequal number of fetches}
+\label{fig:if-trans-code-uneq-after}
+\end{figure}
+
+\section{Transformation in operators}
+
+More concretely \texttt{if} is composed of a starting node called \opite{} and an end node called \opselect{}, see Figure \ref{fig:basic-if}.
+The \opite{} operator takes as its input the boolean value and depending on the value activates one of its two outputs.
+Outputs from the \opite{} operator are connected via an activation arc to the first operator(s) of each of the respective conditional branches.
+The computed output from the conditional branches are both fed to the \opselect{} operator which returns a value whenever one of its inputs receives one.
+
+\begin{figure}
+	\includegraphics[width=\textwidth]{Figures/basic-if}
+	\caption{Dataflow representation of if}
+	\label{fig:basic-if}
+\end{figure}
+
+To close out our fetch from the if we replace the original two fetches with a select operator, receiving both their inputs and feeding into a single fetch.
+The output from this fetch is fed back to \textbf{both} continuation branches.
+Any location that used either fetch result now receives the result of the combined fetch.
+This might seem wrong, however we use a new \opite{} to only select one of the two branches for execution, therefore only the originally selected branch also continues with its execution.
+
+\begin{figure}
+	\includegraphics[width=\textwidth]{Figures/basic-if-rewrite-original}
+	\caption{If rewrite source graph}
+	\label{fig:if-rewrite-graph-before}
+	\includegraphics[width=\textwidth]{Figures/basic-if-rewrite}
+	\caption{If rewrite transformed graph}
+	\label{fig:if-rewrite-graph-after}
+\end{figure}
+
+
+
+
+
+
+
+
+
