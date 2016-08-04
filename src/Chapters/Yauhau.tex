@@ -1,12 +1,16 @@
+%!TEX root = ../thesis.tex
 \chapter{Yauhau}
 
-\label{chapter:Yauhau}
+\label{ch:Yauhau}
 
 \yauhau{} is a compiler plugin for the Ohua compiler.
-It works after the Clojure source has been parsed and transformed into the dataflow IR.
+It was first introduced in the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016}, where a more detailed account of the motivation, implementation and results may be found.
+Following I will briefly outline the basic transformation in \yauhau{} which is necessary to understand the arising problems which I am solving in the Chapters following.
+
+\yauhau{} hooks into the compiler after the Clojure source has been parsed and transformed into the dataflow IR.
 It is a pure IR to IR transformation.
 Additionally a map of context information is given to the plugin.
-The precise nature of this context information will be handled in section \ref{chapter:Context} and is irrelevant to for the basic \yauhau{} idea and transformation.
+The precise nature of this context information will be handled in section \ref{ch:Context} and is irrelevant to for the basic \yauhau{} idea and transformation.
 
 Fundamentally \yauhau{} performs a graph transformation on the dataflow graph it has been given in form of the IR.
 The goal behind this transformation is to find rounds of IO operations which are data independent from each other and execute them as a batch job.
@@ -24,60 +28,6 @@ In \yauhau{} this process is inherently parallel and each datasource performs it
 In Haxl the programmer can choose whether to perform an asynchronous or synchronous request.
 A new experimental and optional feature in \yauhau{} is to do dynamic dispatching of the finished requests.
 This means once a certain datasource returns with the data computations only depending on that datasource, or an even faster one, can continue immediately.
-
-\section{Compile time transformation}
-
-The basic \yauhau{} transformation algorithm, as mentioned, operates entirely on a dataflow graph in form of the IR.
-The transformation does not concern itself with the kinds of nodes in the graph except for one, the \texttt{fetch} node/function which is a special node provided by the \yauhau{} library.
-Beyond that the algorithm only concerns itself with the structure of the graph.
-This significantly simplifies the algorithm.
-
-The goal is to find a minimal set of rounds.
-A `round' is a set of \texttt{fetch} nodes with no data dependencies between the nodes.
-Rounds must not overlap.
-Hence the algorithm finds a minimal set of non overlapping sets of data independent \texttt{fetch nodes}.
-
-After much consideration I decided to go for a very similar approach to Haxl by simulating running the graph and blocking code paths when a \texttt{fetch} node is encountered.
-Simulating the execution of the program is done by tracking three sets of items.
-
-\begin{description}
-	\item[created] The set of created bindings tracks which pieces of data that flow between the nodes of the program have been created prior to a particular point in the program.
-	\item[visited] The set of visited nodes tracks which nodes were part of a previous stage.
-	\item[round] The current round consists of all \fetch{} nodes which were part of a previous stage.
-	When a new fetch round is finalised it will consist of these \fetch{} nodes and the current round will be newly initialised empty.
-\end{description}
-
-Since bindings are unique in the dataflow IR we can track produced data by simply adding the respective binding to the set of created bindings.
-The set of created bindings is initialised with the input parameters of our program.
-From this point we traverse the graph in stages.
-Each stage consists of the set of graph nodes where all inflowing data has previously been created and which was not in a previous stage.
-The former condition is checked by checking, for each input binding, whether the respective binding is contained in the set of created bindings.
-To ensure the latter condition a separate set of visited nodes is maintained and only nodes which are not members of this set are allowed in a new stage.
-Once the stage has been computed all functions in the stage are added to the visited set.
-Then all \fetch{} nodes are filtered from the stage and added to the current round.
-All remaining nodes are being executed.
-Simulating to executing the nodes is done by simply adding all produced binding (return bindings) of the node to the set of created bindings.
-If there are no remaining nodes to execute in a stage we have reached a point where the remainder of the dataflow graph depends on IO actions, including the \fetch{} nodes.
-Therefore the current round is maximal and we simulate executing all \texttt{fetch} nodes of the current round and dispatch a finalised fetch round.
-Afterwards the current round set is initialised empty again.
-This is done until we get an empty stage, at which point we dispatch the current round again, unless it is empty.
-
-Adding the \fetch{} nodes to the set of visited nodes guarantees that rounds do not overlap.
-Not simulating fetch execution before the round finishes guarantees that no round contains two fetches with data dependencies between them, since the dependent fetch would never have been in a stage before the round was finished since the required binding from the first fetch would not be created before the round finishes.
-Finally since we only dispatch a round once no more executable nodes are found all other nodes have to be fully data dependent and this guarantees the set of rounds to me minimal minimal.
-% TODO maybe actually add a proof by induction here
-% Should be doable by looking at the last stage first and then working backwards to 
-% previous stages.
-
-Once the rounds have been computed an accumulated fetch is inserted for every round.
-For each round all fetch nodes in the round are removed from the graph.
-An accumulator is inserted with the combined inputs of all fetch nodes and the combined outputs of those nodes in the same order. See Figure \ref{figure:yauhau-transformation}.
-
-\begin{figure}
-	\includegraphics[width=\textwidth]{Figures/yauhau-transformation}
-	\caption{base transformation}
-	\label{figure:yauhau-transformation}
-\end{figure}
 
 \section{Datasources}
 
@@ -119,8 +69,8 @@ IO actions in \yauhau{} are objects of the \texttt{Request} class.
 public final class Request<Payload, Return>{
     private final Paylod payload;
     private final IDataSource<Payload, Return> dataSource;
-    public Request(Payload payload, 
-                   IDataSource<Payload, Return> dataSource) 
+    public Request(Payload payload,
+                   IDataSource<Payload, Return> dataSource)
                   { /* implementation omitted */ }
     /* omitted code */
 }
@@ -139,19 +89,93 @@ public interface IDataSource<Payload, Return> {
 At runtime requests are sorted by the datasource they are paired with and then handed to the respective source as a single list of many requests.
 
 
+\section{Compile time transformation}
 
+The basic \yauhau{} transformation algorithm, as mentioned, operates entirely on a dataflow graph in form of the IR.
+The transformation does not concern itself with the kinds of nodes in the graph except for one, the \texttt{fetch} node/function which is a special node provided by the \yauhau{} library.
+Beyond that the algorithm only concerns itself with the structure of the graph.
+This significantly simplifies the algorithm.
 
+\subsection{Round detection algorithm}
 
+The goal is to find a minimal set of rounds.
+A `round' is a set of \texttt{fetch} nodes with no data dependencies between the nodes.
+Rounds must not overlap.
+Hence the algorithm finds a minimal set of non overlapping sets of data independent \texttt{fetch nodes}.
 
+After much consideration I decided to go for a very similar approach to Haxl by simulating running the graph and blocking code paths when a \texttt{fetch} node is encountered.
+Simulating the execution of the program is done by tracking three sets of items.
 
+\begin{description}
+	\item[created] The set of created bindings tracks which pieces of data that flow between the nodes of the program have been created prior to a particular point in the program.
+	\item[visited] The set of visited nodes tracks which nodes were part of a previous stage.
+	\item[round] The current round consists of all \fetch{} nodes which were part of a previous stage.
+	When a new fetch round is finalised it will consist of these \fetch{} nodes and the current round will be newly initialised empty.
+\end{description}
 
+Since bindings are unique in the dataflow IR we can track produced data by simply adding the respective binding to the set of created bindings.
+The set of created bindings is initialised with the input parameters of our program.
+From this point we traverse the graph in stages.
+Each stage consists of the set of graph nodes where all inflowing data has previously been created and which was not in a previous stage.
+The former condition is checked by checking, for each input binding, whether the respective binding is contained in the set of created bindings.
+To ensure the latter condition a separate set of visited nodes is maintained and only nodes which are not members of this set are allowed in a new stage.
+Once the stage has been computed all functions in the stage are added to the visited set.
+Then all \fetch{} nodes are filtered from the stage and added to the current round.
+All remaining nodes are being executed.
+Simulating to executing the nodes is done by simply adding all produced binding (return bindings) of the node to the set of created bindings.
+If there are no remaining nodes to execute in a stage we have reached a point where the remainder of the dataflow graph depends on IO actions, including the \fetch{} nodes.
+Therefore the current round is maximal and we simulate executing all \texttt{fetch} nodes of the current round and dispatch a finalised fetch round.
+Afterwards the current round set is initialised empty again.
+This is done until we get an empty stage, at which point we dispatch the current round again, unless it is empty.
 
+Adding the \fetch{} nodes to the set of visited nodes guarantees that rounds do not overlap.
+Not simulating fetch execution before the round finishes guarantees that no round contains two fetches with data dependencies between them, since the dependent fetch would never have been in a stage before the round was finished since the required binding from the first fetch would not be created before the round finishes.
+Finally since we only dispatch a round once no more executable nodes are found all other nodes have to be fully data dependent and this guarantees the set of rounds to me minimal minimal.
+% TODO maybe actually add a proof by induction here
+% Should be doable by looking at the last stage first and then working backwards to
+% previous stages.
 
+\subsection{Graph rewrite}
 
+Once the rounds have been computed an accumulated fetch is inserted for every round.
+For each round all fetch nodes in the round are removed from the graph.
+An accumulator is inserted with the combined inputs of all fetch nodes and the combined outputs of those nodes in the same order. See Figure \ref{figure:yauhau-transformation}.
 
+\begin{figure}
+	\includegraphics[width=\textwidth]{Figures/yauhau-transformation}
+	\caption{base transformation}
+	\label{figure:yauhau-transformation}
+\end{figure}
 
+\subsection{Control flow considerations}
 
+At runtime a node in the dataflow graph waits for inputs to arrive in channels.
+Theres one channel per function argument.
+When the runtime scheduler activates the operator one input packet is removed from each channel and the stateful function is called with these arguments.
+This process repeats until the scheduler decides to deactivate the node or if one of the input channels is empty.
 
+These semantics are the same as they would be in a typical program, where every argument to a function has to be present for its call.
+In dataflow this is not as straight forward as in typical code.
+For instance free variables in algorithms inside an smap have to be specially handled during execution.
+Normally variable bindings are simply translated into a set of arcs from where the value in the binding was originally created to each site where the variable is used.
+When the source emits a value it is sent down each arc once.
+This poses a problem in the case of smap where the target of the arc is inside the smap and other inputs may receive many packets due to the mapping, whereas this input would only receive one.
+What Ohua does to solve this is replicate sending the curried packet once for each element in the mapped collection.
 
+In Yauhau we run into a similar problem.
+We do not curry values but perform an operation which is the complete opposite, where we rewrite connections to lead to an accumulator.
+What we do not consider during our graph transformation is how often any of the fetch operators we are merging are called in the program.
+If we have fetches in different contexts and naively accumulate them we create a similar situation to the one described above, where the inputs to the accumulator receive very different amounts of arguments, an example can be seen in Figure~\ref{fig:naive-batching-context-problem}.
 
+\begin{figure}
+	\caption{Naive batching}
+	\label{fig:naive-batching-context-problem}
+\end{figure}
 
+The structures which introduce issues like this are control flow structures, because they change how often or whether a particular section of code is executed.
+Unfortunately the flow of control in a program is not structurally visible in a dataflow graph.
+Therefore our accumulation transformation is unable to solve this problem.
+
+In the following Chapters I will explain how we handle \texttt{smap} (Chapter~\ref{ch:smap-transformation}) and \texttt{if} (Chapter~\ref{ch:if-transformation}) and how we generalise the two to define a pluggable, general transformation which ensures we handle nesting correctly (Chapter~\ref{ch:Context}).
+
+% But first let me briefly explain the main idea behind those transformations.

@@ -1,16 +1,27 @@
+%!TEX root = ../thesis.tex
 \chapter{Introduction}
 
-\label{ChapterIntro}
+\label{ch:Intro}
 
-This thesis is inseparably linked to a paper written by Sebastian Ertel, Andres Goens and myself entitled ``\yauhauPaperTitle{}'' which unfortunately as of the time of writing this thesis has not been published yet.
-As a result this section also contains a description of the problems we are trying to solve in the paper.
+This thesis concerns itself with the extension and improvement of \yauhau{}, a IO optimisation compiler plugin for the Ohua framework.
+\yauhau{} wasa first introduced in the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016}.
+In this paper we explained how \yauhau{} transforms the dataflow graph of a program to achieve efficient IO while allowing the programmer to write very concise and straight forward code.
+We also alluded to some of the issues that arise from control flow when performing the \yauhau{} transformation and we briefly outlined the solutions that we developed.
 
-Modern large scale applications as found in for example online services like Faceook, Twitter and Google are highly distributed services.
-These applications compose of so called microservices, small units which are often spacially distributed and communicate via the network.
-This means that the application itself spends a large amount of time issuing network requests and processing the results.
-In order to achieve higher performance network requests are executed and processed asynchronously.
+In this thesis I want to explain in much more detail the concrete ways in which I handle control flow in \yauhau{} and explain implementation considerations and decisions.
+Chapter~\ref{ch:smap-transformation} \texttt{smap}, Chapter~\ref{ch:if-transformation} \texttt{if}.
+I also want to introduce the reader to a new generalised concept, called context (Chapter~\ref{ch:Context}), which has now been added to Ohua and allows the correct handling of nested control flow structures.
+At the beginning however I will introduce the reader to the underlying system Ohua (Chapter~\ref{ch:Ohua}) and \yauhau{}~\ref{ch:Yauhau}, the latter of which includes a description of the transformation as performed by the \yauhau{} plugin.
 
-
+Contributions of this thesis are:
+\begin{itemize}
+    \item A more detailed description including implementation considerations and decisions of the \textbf{if and smap transformations}.
+    \item The generalisation of non structurally emergent dataflow graph properties into a concept called \textbf{Context}, its detection and use to handle nested control flow in \yauhau{}.
+    \item An optional graph transformation in \yauhau{} used to \textbf{preserve write semantics} in programs using the \yauhau{} batching.
+    \item New \textbf{experiments} showing the performance of the \yauhau{} plugin in comparison to the existing technologies Haxl and Muse in \textbf{programs with conditionals and mapping}.
+    \item Extensions to the random code generator~\cite{Goens-rand-code-graph} used in the \yauhau{} paper to generate test programs.
+    These extenstions enable support for mapping operations in the code generator.
+\end{itemize}
 
 %
 % This thesis intends to improve on the current implementation of this plugin, provide explanation as to why adjustments to the implemetation are necessary in the first place, document adjustments made to the Ohua core which enable the plugin to function and finally expand on the experimental evaluation started in the paper, providing comparative data for performance of our plugin against frameworks with similar functionality.

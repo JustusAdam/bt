@@ -47,7 +47,10 @@ headsepline, % Uncomment to get a line under the header
 %\usepackage[cache=false,outputdir=.texpadtmp]{minted}
 \usepackage{minted}
 
-\usepackage[backend=bibtex,style=authoryear,natbib=true]{biblatex} % Use the bibtex backend with the authoryear citation style (which resembles APA)
+\usepackage[
+backend=bibtex,
+%style=authoryear,
+natbib=true]{biblatex} % Use the bibtex backend with the authoryear citation style (which resembles APA)
 
 \addbibresource{main.bib} % The filename of the bibliography
 
@@ -273,7 +276,7 @@ The acknowledgments and the people to thank go here, don't forget to include you
 % Uncomment the lines as you write the chapters
 
 
-%\include{Chapters/Introduction}
+\include{Chapters/Introduction}
 %\include{Chapters/DataFlow}
 %\include{Chapters/Context}
 %\include{Chapters/Rewrites}
