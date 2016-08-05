@@ -13,7 +13,7 @@ data GenConf = MkGenConf
     { lang      :: Text
     , numLevels :: Int
     , numGraphs :: Int
-    , seed      :: Maybe Text
+    , seed      :: Maybe Int
     , prctFuns  :: Maybe Float
     , prctMaps  :: Maybe Float
     , prctIf    :: Maybe Float

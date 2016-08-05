@@ -21,8 +21,8 @@ readDecOrFail file =
     either (\e -> error $ printf "Error in file %v: %v" file e) id . eitherDecode <$> readFile file
 
 
-formatSmapRoundData :: MeasuredGraphs -> [(Int, Int)]
-formatSmapRoundData = map average . groupAllOn Types.levels
+formatRoundData :: MeasuredGraphs -> [(Int, Int)]
+formatRoundData = map average . groupAllOn Types.levels
   where
     average grs = (Types.levels (headEx grs), avrg)
       where
@@ -36,11 +36,31 @@ smapRounds filename = do
     yauhauValues <- readDecOrFail "plotting/yauhau-map-monad.json"
 
     let all = [("haxl", haxlValues), ("yauhau", yauhauValues)]
-        groupedAndSorted = map (second (sortOn fst . formatSmapRoundData)) all
+        groupedAndSorted = map (second (sortOn fst . formatRoundData)) all
 
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"
-        layout_x_axis . laxis_title .= "Number of nodes in the program graph"
+        layout_x_axis . laxis_title .= "Number of levels in the program graph"
+        layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
+        mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
+
+
+funcRounds filename = do
+    need ["plotting/haskell-func.json", "plotting/yauhau-func-monad.json"]
+
+    haxlValues <- readDecOrFail "plotting/haskell-func.json"
+    yauhauValues <- readDecOrFail "plotting/yauhau-func-monad.json"
+
+    let all = [("haxl", haxlValues), ("yauhau", yauhauValues)]
+        groupedAndSorted = map (second (catMaybes . map (\e -> do
+                                                            c <- headMay (e :: MeasuredGraphs) >>= genConf
+                                                            p <- prctFuns c
+                                                            return (p, sum (map rounds e) `div` length e))
+                                                  . groupAllOn (genConf >=> prctFuns))) all
+
+    liftIO $ toFile (def & fo_format .~ EPS) filename $ do
+        layout_title .= "Transformation performance"
+        layout_x_axis . laxis_title .= "Number of levels in the program graph"
         layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
 
@@ -53,7 +73,7 @@ figuresDir = "Figures"
 styles = ["MastersDoctoralThesis.cls"]
 
 
-plots = ["smap-rounds.eps"]
+plots = ["smap-rounds.eps", "func-rounds.eps"]
 
 
 copyFromSrc :: FilePath -> Action ()
@@ -75,7 +95,7 @@ buildPFD out = do
       : map (\chapter -> buildDir </> chapterDir </> chapter) chapters
       ++ map (\appendix -> buildDir </> appendixDir </> appendix) appendices
       ++ map (buildDir </>) styles
-      ++ map ((buildDir </> "Figures") </>) figures
+      ++ map ((buildDir </> "Figures") </>) (figures ++ plots)
       ++ map (buildDir </>) bibliography
     Exit e <- command [Cwd buildDir] "latexmk" ["-pdf", "-shell-escape", "-interaction=nonstopmode", srcRel]
     -- trackWrite [buildDir </> out]
@@ -98,6 +118,7 @@ main = shakeArgs shakeOptions{shakeFiles=buildDir} $ do
     "thesis.pdf" %> buildPFD
 
     "_build/Figures/smap-rounds.eps" %> smapRounds
+    "_build/Figures/func-rounds.eps" %> funcRounds
 
     "_build//*.tex" %> copyFromSrc
     "_build//*.cls" %> copyFromSrc
