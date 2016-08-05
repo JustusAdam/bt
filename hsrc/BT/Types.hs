@@ -16,7 +16,7 @@ data GenConf = MkGenConf
     , seed      :: Maybe Int
     , prctFuns  :: Maybe Float
     , prctMaps  :: Maybe Float
-    , prctIf    :: Maybe Float
+    , prctIfs    :: Maybe Float
     } deriving (Show, Eq, Ord)
 
 

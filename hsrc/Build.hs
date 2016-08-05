@@ -29,7 +29,7 @@ formatRoundData = map average . groupAllOn Types.levels
         avrg = sum (map rounds grs) `div` length grs
 
 
-smapRounds filename = do
+smapExperiment filename = do
     need ["plotting/haskell-map.json", "plotting/yauhau-map-monad.json"]
 
     haxlValues <- readDecOrFail "plotting/haskell-map.json"
@@ -45,7 +45,23 @@ smapRounds filename = do
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
 
 
-funcRounds filename = do
+ifExperiment filename = do
+    need ["plotting/haskell-if.json", "plotting/yauhau-if-monad.json"]
+
+    haxlValues <- readDecOrFail "plotting/haskell-if.json"
+    yauhauValues <- readDecOrFail "plotting/yauhau-if-monad.json"
+
+    let all = [("haxl", haxlValues), ("yauhau", yauhauValues)]
+        groupedAndSorted = map (second (sortOn fst . formatRoundData)) all
+
+    liftIO $ toFile (def & fo_format .~ EPS) filename $ do
+        layout_title .= "Transformation performance"
+        layout_x_axis . laxis_title .= "Number of levels in the program graph"
+        layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
+        mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
+
+
+funcExperiment filename = do
     need ["plotting/haskell-func.json", "plotting/yauhau-func-monad.json"]
 
     haxlValues <- readDecOrFail "plotting/haskell-func.json"
@@ -65,6 +81,8 @@ funcRounds filename = do
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
 
 
+
+
 buildDir = "_build"
 sourceDir = "src"
 chapterDir = "Chapters"
@@ -73,7 +91,7 @@ figuresDir = "Figures"
 styles = ["MastersDoctoralThesis.cls"]
 
 
-plots = ["smap-rounds.eps", "func-rounds.eps"]
+plots = ["smap-experiment.eps", "func-experiment.eps", "if-experiment.eps"]
 
 
 copyFromSrc :: FilePath -> Action ()
@@ -117,8 +135,9 @@ main = shakeArgs shakeOptions{shakeFiles=buildDir} $ do
 
     "thesis.pdf" %> buildPFD
 
-    "_build/Figures/smap-rounds.eps" %> smapRounds
-    "_build/Figures/func-rounds.eps" %> funcRounds
+    "_build/Figures/smap-experiment.eps" %> smapExperiment
+    "_build/Figures/func-experiment.eps" %> funcExperiment
+    "_build/Figures/if-experiment.eps" %> ifExperiment
 
     "_build//*.tex" %> copyFromSrc
     "_build//*.cls" %> copyFromSrc
