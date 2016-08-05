@@ -80,7 +80,8 @@ This overwrites any previous marker.
 What we end up with, as a result, is an IR, where every node has, in its metadata, a reference to its closest context starting node.
 The context starting node then has a reference to its nearest outer context and thus we can rebuild the entire context stack for each node afterwards.
 For this we use dynamic programming by populating a HashMap with the stacks for each node reusing previously computed results to save memory.
-This can be done easily because Clojure standard library data structures like \texttt{Vector} are immutable and therefore safe to reuse.
+This can be done safely because Clojure standard library data structures like \texttt{Vector} are immutable and therefore safe to reuse.
+After this process is completed we obtain a Map from node ids to complete, resolved context stacks which is handed to subsequent transformations.
 
 %
 %\section{What is Context?}

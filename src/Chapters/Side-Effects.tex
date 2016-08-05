@@ -1,0 +1,124 @@
+%!TEX root = ../thesis.tex
+\chapter{Side Effects}
+\label{ch:side-effects}
+
+In the application domain of \yauhau{}, which is a program that accesses a remote resource, like a database or some repository over the network, side effects are actions which modify the remote resource.
+They are called side effects because they violate the rules of referential transparency.
+Referential transparency is a property of pure functions and means that the result of a computation does not change, if the call sites of the referentially transparent functions are replaced by their result.
+In \yauhau{} we make the assumption that, even though we do not control the implementation of the fetch performed by the datasource or have control over the remote source, read requests are pure actions.
+This allows us to cache results and remove duplicate requests.
+In practice the remote resource may of course change as the program runs which is why we allow the programmer to choose an appropriate caching strategy with the desired tradeoff between performance and error.
+
+\section{Current implementation}
+
+This behaviour is similar to the behaviour of Haxl, which also caches fetch results and removes duplicate requests.
+We however wanted to go one step further and provide the user with the ability to perform transformative actions on the remote resource during execution.
+Effectful actions are of course already supported by Ohua, however as mentioned before it breaks the assumptions made by \yauhau{}.
+Therefore the programmer would either have to accept the possibility of errors or relinquish the use of a cache, which has profound impacts on performance.
+
+We solve this issue in \yauhau{} by specifically implementing write requests.
+These special write operators are not only able to access the network in a user defined way, but it also informs the cache of the performed request.
+When the user defines a cache to use he can also provide a function for how to manipulate the cache as a result of this request.
+Two simple predefined actions are available by default \texttt{dropOne} and \texttt{dropAll}.
+The former drops a request from the cache matching the current one and the latter clears the entire cache.
+
+\begin{figure}
+\begin{minted}{Java}
+/* Caches should implement this interface */
+public interface Dropable<A> {
+    Dropable<A> dropOne(A a);
+
+    Dropable<A> dropAll();
+}
+
+public interface Cache {
+    BiFunction<Dropable<Request>, Request, Dropable<Request>> getRemoveAction();
+    Object get(Request r);
+    Object set(Request r, Object resp);
+    void handleStore(Request r);
+    int cacheSize();
+}
+\end{minted}
+\caption{The cache interface}
+\label{fig:the-cache-interface}
+\end{figure}
+
+\section{Enforcing order intra algorithm}
+
+This allows programmers to obtain correct read-write semantics, however it still poses an issue due to ordering.
+In ohua order of execution is only guaranteed for operators with explicit data dependencies.
+In the example in Figure~\ref{fig:independent-actions-code} for instance it is entirely indeterministic whether the read or write is going to be executed first.
+This problem can be avoided by using an operator called \texttt{seq}.
+\texttt{seq} enforces its first argument to be fully evaluated before allowing its second argument to be evaluated.
+In the example Figure~\ref{fig:enforcing-order-with-seq} we enforce the write to happen first using seq.
+
+\begin{figure}
+\begin{minted}{Clojure}
+(defalgo reqs [req]
+  (let [_ (write req)
+        r (read req)]
+    r))
+\end{minted}
+\caption{Example for if independent actions}
+\label{fig:independent-actions-code}
+\end{figure}
+
+\begin{figure}
+\begin{minted}{Clojure}
+(defalgo reqs [req]
+  (let [w (write req)
+        r (seq w (read req))]
+    r))
+\end{minted}
+\caption{Enforcing order using seq}
+\label{fig:enforcing-order-with-seq}
+\end{figure}
+
+\begin{figure}
+\begin{minted}{Clojure}
+(defalgo req [req]
+  (read (write req)))
+\end{minted}
+\caption{Enforcing order with data dependencies}
+\label{fig:enforcing-order-with-dd}
+\end{figure}
+
+We could also achieve the same semantics by introducing data dependencies between the two function calls as seen in Figure~\ref{fig:enforcing-order-with-dd}.
+These are typical semantics as would be expected of a program written in a non sequential language like Haskell.
+However one problem still remains.
+
+\section{Enforcing order inter algorithm}
+
+What if we have a similar situation to above, but the read and write requests are in two algorithms?
+An example of this may be seen in Figure~\ref{fig:reads-and-writes-in-algos}.
+Here we have basically the same situation as above, but this time the programmer tried to introduce the data dependency by making one algorithm depend on the result of the other.
+By normal semantics this should work, however in Ohua all algorithms are directly spliced into the main program except two boundary operators called \texttt{algo-in} and \texttt{algo-out}.
+The boundary operators however only track in and output to the alorithm.
+An independent fetch like the one we have here in \texttt{does-read} has no data dependency to the algorithm boundary.
+As the result of our write request is only connected to the algorithm boundary via a parameter there is not data dependency between the read and the write request after splicing.
+
+\begin{figure}
+\begin{minted}{Clojure}
+(defalgo does-read [req some-data]
+  (let [res (read some-constant)]
+    (computation res req some-data)))
+
+(defalgo does-write [req]
+  (write req))
+
+(defalgo reqs [req]
+  (does-read req (does-write req)))
+\end{minted}
+\caption{Reads and writes in algorithms}
+\label{fig:reads-and-writes-in-algos}
+\end{figure}
+
+This all sounds counter intuitive, and it is.
+We would expect regular program semantics to hold in this case, which they do not do.
+There is of course still the \texttt{seq} operator, which we could use to enforce ordering and those semantics actually hold, even across algorithms.
+However we don't want to introcude this extra hurdle or even potential source of very frustrating errors as we break a common and sensible assumption a programmer might make.
+Therefore we would like to automate the addition of \texttt{seq} operators in the program where there are independent reads or writes that may cause unexpected indeterminism.
+
+\section{Rewrite}
+
+Fundamentally we only need to \texttt{seq} algorithms together when we have one of the typical read after write, write after write or read before write conflicts and the latter operator is data independent from the former.
