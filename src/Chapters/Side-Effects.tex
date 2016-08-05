@@ -24,7 +24,7 @@ The former drops a request from the cache matching the current one and the latte
 
 \begin{figure}
 \begin{minted}{Java}
-/* Caches should implement this interface */
+/* Caches should implement both interfaces */
 public interface Dropable<A> {
     Dropable<A> dropOne(A a);
 

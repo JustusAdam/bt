@@ -1,36 +1,48 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Main where
 
-import Development.Shake
-import Development.Shake.Command
-import Development.Shake.FilePath as SFP
-import Development.Shake.Util
-import Control.Monad (replicateM)
-import Graphics.Rendering.Chart.Easy
-import Graphics.Rendering.Chart.Backend.Diagrams
+
+import           BT.Types as Types
+import           BT.Util
+import           ClassyPrelude
+import           Control.Monad                             (replicateM)
+import           Data.Aeson (eitherDecode, FromJSON)
+import           Development.Shake
+import           Development.Shake.Command
+import           Development.Shake.FilePath                as SFP
+import           Development.Shake.Util
+import           Graphics.Rendering.Chart.Backend.Diagrams
+import           Graphics.Rendering.Chart.Easy
+import Text.Printf
 
 
-haxlValues, ohuaValues, intervals :: [Int]
-(intervals, haxlValues, ohuaValues) = unzip3
-    [ (0, 0, 0)
-    , (1, 1, 1)
-    , (2, 1, 1)
-    , (3, 2, 2)
-    , (7, 3, 3)
-    , (12, 4, 3)
-    , (20, 5, 4)
-    , (39, 8, 6)
-    , (60, 10, 8)
-    , (100, 15, 11)
-    ]
+readDecOrFail :: FromJSON a => FilePath -> Action a
+readDecOrFail file =
+    either (\e -> error $ printf "Error in file %v: %v" file e) id . eitherDecode <$> readFile file
 
 
-smapRounds haxlValues ohuaValues filename =
+formatSmapRoundData :: MeasuredGraphs -> [(Int, Int)]
+formatSmapRoundData = map average . groupAllOn Types.levels
+  where
+    average grs = (Types.levels (headEx grs), avrg)
+      where
+        avrg = sum (map rounds grs) `div` length grs
+
+
+smapRounds filename = do
+    need ["plotting/haskell-map.json", "plotting/yauhau-map-monad.json"]
+
+    haxlValues <- readDecOrFail "plotting/haskell-map.json"
+    yauhauValues <- readDecOrFail "plotting/yauhau-map-monad.json"
+
+    let all = [("haxl", haxlValues), ("yauhau", yauhauValues)]
+        groupedAndSorted = map (second (sortOn fst . formatSmapRoundData)) all
+
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"
         layout_x_axis . laxis_title .= "Number of nodes in the program graph"
         layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
-        plot (line "haxl" [ zip intervals haxlValues ])
-        plot (line "yauhau" [ zip intervals ohuaValues ])
+        mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
 
 
 buildDir = "_build"
@@ -85,7 +97,7 @@ main = shakeArgs shakeOptions{shakeFiles=buildDir} $ do
 
     "thesis.pdf" %> buildPFD
 
-    "//smap-rounds.eps" %> smapRounds haxlValues ohuaValues
+    "_build/Figures/smap-rounds.eps" %> smapRounds
 
     "_build//*.tex" %> copyFromSrc
     "_build//*.cls" %> copyFromSrc
