@@ -2,57 +2,74 @@
 module Main where
 
 
-import           BT.Types as Types
+import           BT.Types                                  as Types
 import           BT.Util
 import           ClassyPrelude
 import           Control.Monad                             (replicateM)
-import           Data.Aeson (eitherDecode, FromJSON)
+import           Data.Aeson                                (FromJSON,
+                                                            eitherDecode)
 import           Development.Shake
 import           Development.Shake.Command
 import           Development.Shake.FilePath                as SFP
 import           Development.Shake.Util
 import           Graphics.Rendering.Chart.Backend.Diagrams
 import           Graphics.Rendering.Chart.Easy
-import Text.Printf
+import           Text.Printf
 
 
 readDecOrFail :: FromJSON a => FilePath -> Action a
 readDecOrFail file =
-    either (\e -> error $ printf "Error in file %v: %v" file e) id . eitherDecode <$> readFile file
+    either (error . printf "Error in file %v: %v" file) id . eitherDecode <$> readFile file
 
 
-formatRoundData :: MeasuredGraphs -> [(Int, Int)]
-formatRoundData = map average . groupAllOn Types.levels
+levelsToRounds :: MeasuredGraphs -> [(Int, Int)]
+levelsToRounds = map average . groupAllOn Types.levels
   where
     average grs = (Types.levels (headEx grs), avrg)
       where
         avrg = sum (map rounds grs) `div` length grs
 
 
+percentagesToRounds :: Ord a => (GenConf -> Maybe a) -> MeasuredGraphs -> [(a, Int)]
+percentagesToRounds getter = catMaybes . map average . groupAllOn (genConf >=> getter)
+  where
+    average e = do
+        c <- headMay e >>= genConf
+        p <- getter c
+        return (p, sum (map rounds e) `div` length e)
+
+
+readData :: FromJSON a => [(b, FilePath)] -> Action [(b, a)]
+readData sourceData = do
+    need $ map snd sourceData
+    mapM (\(name, file) -> (name, ) <$> readDecOrFail file) sourceData
+
+
+smapExperimentSource =
+    [ ("Haxl", "plotting/haskell-map.json")
+    , ("Yauhau", "plotting/yauhau-map-monad.json")
+    ]
+
 smapExperiment filename = do
-    need ["plotting/haskell-map.json", "plotting/yauhau-map-monad.json"]
+    values <- readData smapExperimentSource
 
-    haxlValues <- readDecOrFail "plotting/haskell-map.json"
-    yauhauValues <- readDecOrFail "plotting/yauhau-map-monad.json"
-
-    let all = [("haxl", haxlValues), ("yauhau", yauhauValues)]
-        groupedAndSorted = map (second (sortOn fst . formatRoundData)) all
+    let groupedAndSorted = map (second levelsToRounds) values
 
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"
-        layout_x_axis . laxis_title .= "Number of levels in the program graph"
+        layout_x_axis . laxis_title .= "Percentage of mapping nodes during generation"
         layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
 
+ifExperimentSource =
+    [ ("Haxl", "plotting/haskell-if.json")
+    , ("Yauhau", "plotting/yauhau-if-monad.json")
+    ]
 
 ifExperiment filename = do
-    need ["plotting/haskell-if.json", "plotting/yauhau-if-monad.json"]
+    values <- readData ifExperimentSource
 
-    haxlValues <- readDecOrFail "plotting/haskell-if.json"
-    yauhauValues <- readDecOrFail "plotting/yauhau-if-monad.json"
-
-    let all = [("haxl", haxlValues), ("yauhau", yauhauValues)]
-        groupedAndSorted = map (second (sortOn fst . formatRoundData)) all
+    let groupedAndSorted = map (second levelsToRounds) values
 
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"
@@ -60,27 +77,37 @@ ifExperiment filename = do
         layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
 
+ifExperimentDelayedSource =
+    [ ("Haxl", "plotting/haskell-if-delayed.json")
+    , ("Yauhau", "plotting/yauhau-if-delayed-monad.json")
+    ]
+
+ifExperimentDelayed filename = do
+    values <- readData ifExperimentDelayedSource
+
+    let groupedAndSorted = map (second levelsToRounds) values
+
+    liftIO $ toFile (def & fo_format .~ EPS) filename $ do
+        layout_title .= "Transformation performance"
+        layout_x_axis . laxis_title .= "Number of levels in the program graph"
+        layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
+        mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
+
+funcExperimentSource =
+    [ ("Haxl", "plotting/haskell-func.json")
+    , ("Yauhau", "plotting/yauhau-func-monad.json")
+    ]
 
 funcExperiment filename = do
-    need ["plotting/haskell-func.json", "plotting/yauhau-func-monad.json"]
+    values <- readData funcExperimentSource
 
-    haxlValues <- readDecOrFail "plotting/haskell-func.json"
-    yauhauValues <- readDecOrFail "plotting/yauhau-func-monad.json"
-
-    let all = [("haxl", haxlValues), ("yauhau", yauhauValues)]
-        groupedAndSorted = map (second (catMaybes . map (\e -> do
-                                                            c <- headMay (e :: MeasuredGraphs) >>= genConf
-                                                            p <- prctFuns c
-                                                            return (p, sum (map rounds e) `div` length e))
-                                                  . groupAllOn (genConf >=> prctFuns))) all
+    let groupedAndSorted = map (second $ percentagesToRounds prctFuns) values
 
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"
-        layout_x_axis . laxis_title .= "Number of levels in the program graph"
+        layout_x_axis . laxis_title .= "Percentage of function nodes during generation"
         layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
-
-
 
 
 buildDir = "_build"
@@ -89,9 +116,12 @@ chapterDir = "Chapters"
 appendixDir = "Appendices"
 figuresDir = "Figures"
 styles = ["MastersDoctoralThesis.cls"]
-
-
-plots = ["smap-experiment.eps", "func-experiment.eps", "if-experiment.eps"]
+plots =
+    [ "smap-experiment.eps"
+    , "func-experiment.eps"
+    , "if-experiment.eps"
+    -- , "if-experiment-delayed.eps"
+    ]
 
 
 copyFromSrc :: FilePath -> Action ()
@@ -109,12 +139,12 @@ buildPFD out = do
     figures <- filter ((/=) ".graffle" . takeExtension) <$> getDirectoryContents (sourceDir </> figuresDir)
     bibliography <- filter ((==) ".bib" .takeExtension) <$> getDirectoryContents sourceDir
     need $
-      src
-      : map (\chapter -> buildDir </> chapterDir </> chapter) chapters
-      ++ map (\appendix -> buildDir </> appendixDir </> appendix) appendices
-      ++ map (buildDir </>) styles
-      ++ map ((buildDir </> "Figures") </>) (figures ++ plots)
-      ++ map (buildDir </>) bibliography
+        src
+        : map (\chapter -> buildDir </> chapterDir </> chapter) chapters
+        ++ map (\appendix -> buildDir </> appendixDir </> appendix) appendices
+        ++ map (buildDir </>) styles
+        ++ map ((buildDir </> "Figures") </>) (figures ++ plots)
+        ++ map (buildDir </>) bibliography
     Exit e <- command [Cwd buildDir] "latexmk" ["-pdf", "-shell-escape", "-interaction=nonstopmode", srcRel]
     -- trackWrite [buildDir </> out]
     copyFileChanged (buildDir </> out) out
@@ -138,6 +168,7 @@ main = shakeArgs shakeOptions{shakeFiles=buildDir} $ do
     "_build/Figures/smap-experiment.eps" %> smapExperiment
     "_build/Figures/func-experiment.eps" %> funcExperiment
     "_build/Figures/if-experiment.eps" %> ifExperiment
+    "_build/Figures/if-experiment-delayed.eps" %> ifExperimentDelayed
 
     "_build//*.tex" %> copyFromSrc
     "_build//*.cls" %> copyFromSrc
