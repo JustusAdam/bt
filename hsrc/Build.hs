@@ -2,8 +2,6 @@
 module Main where
 
 
-import           BT.Types                                  as Types
-import           BT.Util
 import           ClassyPrelude
 import           Control.Monad                             (replicateM)
 import           Data.Aeson                                (FromJSON,
@@ -15,6 +13,7 @@ import           Development.Shake.Util
 import           Graphics.Rendering.Chart.Backend.Diagrams
 import           Graphics.Rendering.Chart.Easy
 import           Text.Printf
+import Experiment.Haxl.Types as Types
 
 
 readDecOrFail :: FromJSON a => FilePath -> Action a
@@ -22,21 +21,28 @@ readDecOrFail file =
     either (error . printf "Error in file %v: %v" file) id . eitherDecode <$> readFile file
 
 
-levelsToRounds :: MeasuredGraphs -> [(Int, Int)]
+fdiv :: (Real a, Real b, Fractional c) => a -> b -> c
+fdiv a b = realToFrac a / realToFrac b
+
+
+levelsToRounds :: MeasuredGraphs -> [(Int, Float)]
 levelsToRounds = map average . groupAllOn Types.levels
   where
     average grs = (Types.levels (headEx grs), avrg)
       where
-        avrg = sum (map rounds grs) `div` length grs
+        avrg = sum (map rounds grs) `fdiv` length grs
 
 
-percentagesToRounds :: Ord a => (GenConf -> Maybe a) -> MeasuredGraphs -> [(a, Int)]
-percentagesToRounds getter = catMaybes . map average . groupAllOn (genConf >=> getter)
+percentagesToSomething :: (Ord a, Real b) => (MeasuredGraph -> b) -> (GenConf -> Maybe a) -> MeasuredGraphs -> [(a, Float)]
+percentagesToSomething getSomething getter = catMaybes . map average . groupAllOn (genConf >=> getter)
   where
     average e = do
         c <- headMay e >>= genConf
         p <- getter c
-        return (p, sum (map rounds e) `div` length e)
+        return (p, sum (map getSomething e) `fdiv` length e)
+
+percentagesToRounds = percentagesToSomething rounds
+percentagesToTime = percentagesToSomething time
 
 
 readData :: FromJSON a => [(b, FilePath)] -> Action [(b, a)]
@@ -53,7 +59,7 @@ smapExperimentSource =
 smapExperiment filename = do
     values <- readData smapExperimentSource
 
-    let groupedAndSorted = map (second levelsToRounds) values
+    let groupedAndSorted = map (second $ percentagesToRounds prctMaps) values
 
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"
@@ -69,7 +75,7 @@ ifExperimentSource =
 ifExperiment filename = do
     values <- readData ifExperimentSource
 
-    let groupedAndSorted = map (second levelsToRounds) values
+    let groupedAndSorted = map (second $ percentagesToRounds prctIfs) values
 
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"
@@ -85,7 +91,7 @@ ifExperimentDelayedSource =
 ifExperimentDelayed filename = do
     values <- readData ifExperimentDelayedSource
 
-    let groupedAndSorted = map (second levelsToRounds) values
+    let groupedAndSorted = map (second $ percentagesToTime prctIfs) values
 
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"
@@ -120,7 +126,7 @@ plots =
     [ "smap-experiment.eps"
     , "func-experiment.eps"
     , "if-experiment.eps"
-    -- , "if-experiment-delayed.eps"
+    , "if-experiment-delayed.eps"
     ]
 
 
