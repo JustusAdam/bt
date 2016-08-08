@@ -75,12 +75,12 @@ ifExperimentSource =
 ifExperiment filename = do
     values <- readData ifExperimentSource
 
-    let groupedAndSorted = map (second $ percentagesToRounds prctIfs) values
+    let groupedAndSorted = map (second $ percentagesToSomething fetches prctIfs) values
 
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"
         layout_x_axis . laxis_title .= "Number of levels in the program graph"
-        layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
+        layout_y_axis . laxis_title .= "Number of total fetches performed"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
 
 ifExperimentDelayedSource =
@@ -96,7 +96,7 @@ ifExperimentDelayed filename = do
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"
         layout_x_axis . laxis_title .= "Number of levels in the program graph"
-        layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
+        layout_y_axis . laxis_title .= "Program execution time"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
 
 funcExperimentSource =

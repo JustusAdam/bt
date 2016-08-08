@@ -1,21 +1,72 @@
+%!TEX root = ../thesis.tex
 \chapter{Experiments}
 
-\label{ChapterExperiments}
+\label{ch:Experiments}
 
-\begin{figure}
-    \includegraphics[width=\linewidth]{../Figures/smap-experiment.eps}
-    \caption{Number of rounds performed with maps enabled}
-\end{figure}
+In this chapter I will show some experimental evidence of the effectiveness of the system which we have implemented.
+Experiments are usually run against one or both of the competing systems Haxl\cite{Haxl:library:link} and Muse\cite{Muse:repository:link}.
+As mentioned in previous Chapters the code used for testing all systems in equal conditions is generated with our random code generator\cite{Goens-rand-code-graph}.
+Additional boilerplate implementations for test data sources etc can be found in the \yauhau{} repository\cite{Yauhau:repository:link} for the \yauhau{} and Muse experiment code and for Haxl in the haxl-test-generated-graph\footnote{https://github.com/JustusAdam/haxl-test-generated-graph} repository.
+
+\section{Functions}
+
+This experiment shows the effectiveness of the round-detection algorithm on modularised code by the way of generating program graphs which contains calls to algorithms.
+Our experiment setup for this experiment operates on several graphs of constant depth (number of levels is constant).
+We gradually increase the relative amount of algorithm calling nodes in the graph.
+Additionally we run the series against multiple seeds to get an average result, hence fractional amounts of rounds.
 
 \begin{figure}
     \includegraphics[width=\linewidth]{../Figures/func-experiment.eps}
     \caption{Number of rounds performed with functions enabled}
 \end{figure}
 
+As is visible in the graph our algorithm performs better than Haxl.
+This is due to restrictions of using a runtime detection.
+In Haxl the fetches inside a called functions can only be inspected once all function parameters were provided and the term was bound to the monad.
+Fetches which were independent from the function arguments therefore can still only be executed once the function received all input parameters
+Since our algorithm operates on a dataflow graph and splices algorithms we can detect fetches which are independent from algorithm arguments and perform them before the algorithm would even be called.
+
+\section{Smap}
+
+This experiment show the quality of transformation for program graphs containing operations which map over a collection.
+Our experiment setup for this experiment operates on several graphs of constant depth (number of levels is constant).
+We gradually increase the relative amount of mapping operations in the graph.
+Additionally we run the series against multiple seeds to get an average result.
+
+\begin{figure}
+    \includegraphics[width=\linewidth]{../Figures/smap-experiment.eps}
+    \caption{Number of rounds performed with maps enabled}
+\end{figure}
+
+\section{Conditionals}
+
+Since the laziness of our algorithm behaves slightly different to those in Haxl we have devised two experiments here to show the pros and cons for both versions.
+The first again measures the amount of fetch rounds in relation to the percentage of conditionals.
+The lower the number the better.
+
 \begin{figure}
     \includegraphics[width=\linewidth]{../Figures/if-experiment.eps}
     \caption{Number of rounds performed with conditionals enabled}
 \end{figure}
+
+As we can see \yauhau{} generally performs better than the competition.
+This is due to the way our code generator serialises the source code.
+All computed values are first bound to local bindings and subsequent nodes may use those values as arguments.
+The practical advantage here is that the value can be used multiple times without having to be recomputed.
+In general if a subsequent node depends on the result of a computation it is safe to assume the computation is in fact necessary.
+However if the subsequent node happens to be a conditional assumption does not hold since a conditional node like \texttt{(if cond then else)} at least one of the \texttt{then}, \texttt{else} branches will not be used.
+Therefore correct semantic would be not to precompute the value through binding but leave the entire computation on the branch, to be computed after the condition has been evaluated.
+Implementing this however proved to be challenging given the current API of the code generator.
+We decided to leave the generator as-is and instead show a comparison of the effects such a code generation would have.
+
+Since both Haskell and Muse have strict semantics for monadic binds, which is what the generator adds to create the values, both branches of the if node are precomputed.
+The result of this, as we can see, is a higher number of overall fetches.
+\yauhau{} does not obey this strict semantic. The algorithm with the dataflow graph is able to detect if the values are only used on the branches and will not compute them unless the respective branch is selected.
+However as mentioned before this is forces through the code generator.
+In a real program it would lie in the hand of the programmer to choose whether to precompute those values.
+We therefore include a second plot showing the effects of precomputing values if one of the data sources is significantly slower than the others.
+In cases like these it may be desired to introduce strict semantics in order to reduce latency at the cost of redundant fetches.
+The same behaviour can be achieved in \yauhau{} as well using the \texttt{seq} function.
 
 \begin{figure}
     \includegraphics[width=\linewidth]{../Figures/if-experiment-delayed.eps}
