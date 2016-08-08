@@ -73,8 +73,30 @@ We can also see that contexts are special in Ohua since they are not available t
 
 \section{Detection}
 
-Context detection in Ohua is done when the Clojure code is being transformed into the IR.
-At this point the subgraphs enclosed by the context are easily visible.
+\subsection{Previous}
+
+The detection algorithm for contexts went through several iterations.
+Originally the context detection was performed only in \yauhau{} as contexts seemed only useful when unwinding them to prepare the batching transformation.
+The former detection algorithm employed a strategy whereby the graph would be traversed in topological order.
+Each nodes context would be calculated from the maximal context out of the contexts from the parent nodes (see inheritance property).
+Maximal context here means the most deeply nested (see full enclosure property).
+Then depending on the type of node this context stack would be transformed.
+
+\begin{enumerate}
+  \item If the node opens a new context (\texttt{smap}, \texttt{if}) a new frame for that context is pushed onto the context stack.
+  \item If the node closes the current topmost context (\texttt{collect}, \texttt{select}) the topmost frame is popped off the stack.
+  \item If the node neither closes nor opens a new context stack remains the same.
+  \item If the node closes a context which is not the current topmost context an error os thrown.
+\end{enumerate}
+
+The node would then be labeled with the transformed context stack.
+
+\subsection{Current}
+
+After the detection moved into the Ohua project the site of context detection was moved as well.
+Additionally new types of context are now recognised, such as \texttt{algo} and \texttt{seq}.
+Context detection in Ohua is now done right when the Clojure code is being transformed into the IR.
+At this point the subgraphs enclosed by the context are even more easily visible.
 When we traverse the AST and we encounter a context introducing function like smap, we mark the enclosed function such that when it is being traversed all nodes inside are annotated with a reference to the smap starting node.
 This overwrites any previous marker.
 What we end up with, as a result, is an IR, where every node has, in its metadata, a reference to its closest context starting node.

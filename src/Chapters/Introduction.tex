@@ -4,14 +4,14 @@
 \label{ch:Intro}
 
 This thesis concerns itself with the extension and improvement of \yauhau{}, a IO optimisation compiler plugin for the Ohua framework.
-\yauhau{} wasa first introduced in the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016}.
+\yauhau{} was first introduced in the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016}.
 In this paper we explained how \yauhau{} transforms the dataflow graph of a program to achieve efficient IO while allowing the programmer to write very concise and straight forward code.
 We also alluded to some of the issues that arise from control flow when performing the \yauhau{} transformation and we briefly outlined the solutions that we developed.
 
 In this thesis I want to explain in much more detail the concrete ways in which I handle control flow in \yauhau{} and explain implementation considerations and decisions.
-Chapter~\ref{ch:smap-transformation} \texttt{smap}, Chapter~\ref{ch:if-transformation} \texttt{if}.
+Chapter~\ref{ch:smap-transformation} concerns itself with \texttt{smap} and Chapter~\ref{ch:if-transformation} explains in more detail the handling of \texttt{if}.
 I also want to introduce the reader to a new generalised concept, called context (Chapter~\ref{ch:Context}), which has now been added to Ohua and allows the correct handling of nested control flow structures.
-At the beginning however I will introduce the reader to the underlying system Ohua (Chapter~\ref{ch:Ohua}) and \yauhau{}~\ref{ch:Yauhau}, the latter of which includes a description of the transformation as performed by the \yauhau{} plugin.
+At the beginning however I will introduce the reader to the underlying Ohua (Chapter~\ref{ch:Ohua}) framework and the basics of the \yauhau{}~\ref{ch:Yauhau} plugin, the latter of which includes a description of the basic IO batching transformation.
 
 Contributions of this thesis are:
 \begin{itemize}
