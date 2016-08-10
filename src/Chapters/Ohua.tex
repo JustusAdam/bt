@@ -1,21 +1,24 @@
+%!TEX root = ../thesis.tex
 \chapter{Ohua}
 
 \label{ch:Ohua}
 
-Ohua is parallelisation framework implemented in Java and Clojure.
+Ohua\cite{Ohua:library:link} is parallelisation framework implemented in Java and Clojure.
 
 At compile time Ohua transforms the program into a dataflow graph.
-This graph is a representation of individual parts of code of the program and the data dependencies between them.
+This graph is a representation of individual chunks of code of the program and the data dependencies between them.
 Since Ohua currently does not support recursion this graph is a DAG.
 Nodes are atomic pieces of code which are called stateful functions.
 Edges represent data dependencies.
-Edge direction indicates return or argument.
+Edge direction indicates return and argument.
 The return of the source node is argument to the target node.
 The return value of one stateful function may be used by multiple other stateful functions and each stateful function can have multiple inputs or none at all.
 
 This dataflow graph can then be executed by a dataflow execution runtime which dynamically schedules the nodes of the graph.
 The runtime knows about the data dependencies between the nodes of the graph and therefore can schedule independent nodes in parallel.
-As a result we obtain automatic pipeline parallelism.
+Data independent nodes can be executed in parallel.
+Also subsequent calls to the same node with unrelated data, as a result of a mapping operation for instance, can be executed in parallel.
+As a result we obtain pipeline parallelism.
 
 
 \section{Stateful Functions}
@@ -28,37 +31,51 @@ Each stateful function has an associated class, which holds the internal, opaque
 Whenever a stateful function is referenced in code in the \texttt{ohua} or \texttt{algo} macro the runtime creates a new instance of the class in which the stateful function is implemented.
 As a result invocations of the same call site of a stateful function share an opaque state.
 But different call sites do not share state implicitly.
-To share state across call sites the state parameter has to be explicitly passed as an argument.
+To share state across call sites the state has to be explicitly passed to the function as an argument.
 This ensures that state sharing is transparent to the runtime without requiring in depth knowledge about the structure of the state itself.
 
 When executing the dataflow graph the runtime dynamically executes nodes.
 As a result the precise order in which the graph is executed is indeterministic.
-However the runtime ensures that for each node the data items arrive in the correct order which preserves semantics not only in the high level algorithm but also with regards to the internal state of the stateful functions.
+However the runtime ensures that for each node the order of its subsequent invocations is preserved which ensures correct semantics not only in the high level algorithm but also with regards to the internal, opaque state of the stateful function itself.
 
 \section{Algorithms}
 
 Algorithms express high level, parallelisable computations in Ohua.
 These algorithms are written in Clojure using the \texttt{algo} macro.
 Algorithms use and combine stateful functions to express complex computations.
+Algorithms are generally assumed to be pure in so far as there are no data dependencies between any two functions which are not directly visible via function arguments and return values.
+No two functions should share data in ant way other then by explicitly passing them from one to the other via arguments and return.
+Furthermore there should not be any dependency on invocation ordering which is not expressed directly through data dependencies.
+As an example in Figure~\ref{fig:indeterministic-code} we can see  snippet of code where, if this were normal Clojure code, the read would be executed before the write due to the sequential, deterministic semantics of a Clojure \texttt{let} binding.
+In Ohua however, since there are no data dependencies between read and write, the execution order of those two stateful functions is not deterministic and they could even be executed simultaneously.
 When the algorithm is executed using the \texttt{ohua} or \texttt{<-ohua} macro the algorithms Clojure code is compiled into a dataflow graph and executed by the Ohua runtime.
 
-\begin{itemize}
-	\item Yauhau is a plugin for the ohua compiler (IR -> IR transformation)
-	\item Yauhau takes advantage of data flow execution
-\end{itemize}
+\begin{figure}
+\begin{minted}{Clojure}
+(defalgo my-algo []
+  (let [a (read-database)
+        b (write-database)]
+    (comute a b)))
+\end{minted}
+\caption{An example of indeterministic code}
+\label{fig:indeterministic-code}
+\end{figure}
 
 \section{Dataflow IR}
 
 Ohua was already using a data flow graph for its runtime execution model, but in order to implement Yauhau we also needed a (much simpler) compile time data flow graph representation.
-A simplified dataflow representation also lends itself nicely for performing high level optimisations on the graph itself.
+A simplified dataflow representation also lends itself nicely for performing high level optimisations on the graph itself as well as perform analysis such as type checking\footnote{This may be subject of future work}.
 As a result the dataflow IR on which \yauhau{} operates is now directly part of Ohua and its compilation pipeline.
 
 Like the final dataflow graph the IR encodes the dataflow relationships inside of the program.
 The description of the graph contains two elements:
 
 \begin{enumerate}
-    \item \textbf{Bindings} are named data elements or alternatively can be interpreted as a data path. Each binding has to be unique, which means it can only be assigned to once, in which case we also speak of the \textit{creation} of the binding or of \textit{writing} the binding. However the binding may be read any number of times (including 0).
-    \item \textbf{(Stateful)Functions} are atomic pieces of code. They are characterized by a function name which doubles as a reference to the code itself, its input parameters as a list of bindings and its return values, also a list of bindings.
+    \item \textbf{Bindings} are named data elements or alternatively can be interpreted as a data path.
+    Each binding has to be unique and constant, which means it can only be assigned to once, in which case we also speak of the \textit{creation} of the binding or of \textit{writing} the binding.
+    However the binding may be read any number of times (including 0).
+    \item \textbf{(Stateful)Functions} are atomic pieces of code.
+    They are characterized by a function name which doubles as a reference to the code itself, its input parameters as a list of bindings and its return values, also a list of bindings.
     This might be more analogous to a call site or function invocation in traditional jargon.
     If a binding is present in a parameter list we also speak of the binding being \textit{read}.
     Is the binding present in the return value list we also speak of the binding being \textit{written} or \textit{created}\footnote{Due to the uniqueness constraint \textit{writing} and \textit{creating} are the same here.}.
@@ -95,11 +112,13 @@ The direction is given by the flow of data, from output to input.
 The graphs have to be acyclic.
 This is a restriction currently imposed by the underlying Ohua framework but it is also embraced by the algorithms in this thesis because it allows simpler implementations.
 In the future this restriction may be lifted, at least internally, to allow more optimisations and flexibility.
+
 Functions are nodes.
 I hereby mean a function as a concrete call site including input and output bindings.
 This is in contrast to \textit{function names} which are simply labels to the node describing its functionality.
+
 Bindings are edges.
-Each named binding represents multiple edges, incluing none.
+Each named binding represents multiple edges, including none.
 Bindings are \textit{write once}, hence any binding may only occur once as a return value but may be used an arbitrary number of times as input value.
 As a result all edges represented by a particular binding originate from the same node.
 Furthermore the graph must be complete, as in any binding read must have previously been written.

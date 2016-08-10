@@ -10,11 +10,11 @@ Following I will briefly outline the basic transformation in \yauhau{} which is 
 \yauhau{} hooks into the compiler after the Clojure source has been parsed and transformed into the dataflow IR.
 It is a pure IR to IR transformation.
 Additionally a map of context information is given to the plugin.
-The precise nature of this context information will be handled in section \ref{ch:Context} and is irrelevant to for the basic \yauhau{} idea and transformation.
+The precise nature of this context information will be explained in section \ref{ch:Context} and is irrelevant to for the basic \yauhau{} idea and transformation.
 
 Fundamentally \yauhau{} performs a graph transformation on the dataflow graph it has been given in form of the IR.
-The goal behind this transformation is to find rounds of IO operations which are data independent from each other and execute them as a batch job.
-This is similar to the approach taken by \cite{Haxl:library:link}, a Haskell library, also with the aim of optimising IO batching.
+The goal behind this transformation is to find sets of IO operations which are data independent from each other and execute them as a batch job.
+This is functionally similar to the approach taken by Haxl\cite{Haxl:library:link}, a Haskell library, also with the aim of optimising IO batching and the inspiration for the original paper.
 Haxl leverages the Monad and Applicative abstractions provided by the Haskell language and base library to propagate a list of parallel executable IO actions through the program path, blocking each path as soon as an IO action is encountered.
 This is a dynamic way of finding parallel IO actions, aka a runtime data structure (Data.Sequence.Seq) is populated as the program executes.
 \yauhau{} takes a different approach and statically finds parallel IO actions at compile time.
@@ -27,7 +27,7 @@ Each sublist is handed to the respective datasource which has to perform the fet
 In \yauhau{} this process is inherently parallel and each datasource performs its request at the same time in parallel.
 In Haxl the programmer can choose whether to perform an asynchronous or synchronous request.
 A new experimental and optional feature in \yauhau{} is to do dynamic dispatching of the finished requests.
-This means once a certain datasource returns with the data computations only depending on that datasource, or an even faster one, can continue immediately.
+This means once a certain datasource returns with the data, computations only depending on that datasource, can continue immediately.
 
 \section{Datasources}
 
@@ -88,13 +88,29 @@ public interface IDataSource<Payload, Return> {
 
 At runtime requests are sorted by the datasource they are paired with and then handed to the respective source as a single list of many requests.
 
-
 \section{Compile time transformation}
 
 The basic \yauhau{} transformation algorithm, as mentioned, operates entirely on a dataflow graph in form of the IR.
 The transformation does not concern itself with the kinds of nodes in the graph except for one, the \texttt{fetch} node/function which is a special node provided by the \yauhau{} library.
 Beyond that the algorithm only concerns itself with the structure of the graph.
 This significantly simplifies the algorithm.
+The \fetch{} node itself is a regular stateful function (See Figure~\ref{fig:fetch-implementation}) and works without the \yauhau{} transformation, although using it without the batching optimisation makes it much less useful.
+
+\begin{figure}
+\begin{minted}{Java}
+public final class FetchOp<P, R> {
+    @defsfn
+    public R fetch(@ReadOnly Request<P, R> request) {
+        ArrayList<P> l = new ArrayList<>();
+        l.add(request.getPayload());
+        Iterable<R> res = request.getDataSource().fetch(l);
+        return res.iterator().next();
+    }
+}
+\end{minted}
+\caption{implementation of the \texttt{fetch} function}
+\label{fig:fetch-implementation}
+\end{figure}
 
 \subsection{Round detection algorithm}
 
@@ -141,12 +157,6 @@ Once the rounds have been computed an accumulated fetch is inserted for every ro
 For each round all fetch nodes in the round are removed from the graph.
 An accumulator is inserted with the combined inputs of all fetch nodes and the combined outputs of those nodes in the same order. See Figure \ref{figure:yauhau-transformation}.
 
-\begin{figure}
-	\includegraphics[width=\textwidth]{Figures/yauhau-transformation}
-	\caption{base transformation}
-	\label{figure:yauhau-transformation}
-\end{figure}
-
 \subsection{Control flow considerations}
 
 At runtime a node in the dataflow graph waits for inputs to arrive in channels.
@@ -166,8 +176,15 @@ In Yauhau we run into a similar problem.
 We do not curry values but perform an operation which is the complete opposite, where we rewrite connections to lead to an accumulator.
 What we do not consider during our graph transformation is how often any of the fetch operators we are merging are called in the program.
 If we have fetches in different contexts and naively accumulate them we create a similar situation to the one described above, where the inputs to the accumulator receive very different amounts of arguments, an example can be seen in Figure~\ref{fig:naive-batching-context-problem}.
+In the example provided we can see two issues.
+When a collection, which is longer than 1 is given to smap the respective input to the accumulator would be provided with a piece of data for each item in the collection whereas the bottommost input would at the same time only receive a single piece of data.
+At the same time the topmost two inputs come from inside an if which means that only \textbf{one} of those two accumulator inputs would receive data at any given time, whereas the other receives nothing.
 
 \begin{figure}
+    \includegraphics[width=\textwidth]{Figures/yauhau-transformation}
+	\caption{base transformation}
+	\label{figure:yauhau-transformation}
+    \includegraphics[width=\textwidth]{../Figures/naive-transformation}
 	\caption{Naive batching}
 	\label{fig:naive-batching-context-problem}
 \end{figure}

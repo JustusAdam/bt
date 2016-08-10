@@ -79,7 +79,7 @@ ifExperiment filename = do
 
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"
-        layout_x_axis . laxis_title .= "Number of levels in the program graph"
+        layout_x_axis . laxis_title .= "Percentage of conditional nodes"
         layout_y_axis . laxis_title .= "Number of total fetches performed"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
 
@@ -95,7 +95,7 @@ ifExperimentDelayed filename = do
 
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"
-        layout_x_axis . laxis_title .= "Number of levels in the program graph"
+        layout_x_axis . laxis_title .= "Percentage of conditional nodes"
         layout_y_axis . laxis_title .= "Program execution time"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
 

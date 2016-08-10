@@ -105,6 +105,29 @@ For this we use dynamic programming by populating a HashMap with the stacks for 
 This can be done safely because Clojure standard library data structures like \texttt{Vector} are immutable and therefore safe to reuse.
 After this process is completed we obtain a Map from node ids to complete, resolved context stacks which is handed to subsequent transformations.
 
+\section{Unwinding nested context}
+
+Contexts like \texttt{if} and \texttt{smap} can be arbitrarily nested and interleaved in a program.
+The detection algorithm, as described above, is able to correctly identify stacks of contexts for each node of the graph.
+Subsequently we would like to `undo' each layer of context around each fetch to guarantee the node is only executed once per program run, which allows us to batch it.
+This `undoing' operation should be reasonably efficient and yet easy to understand.
+
+My context unwinding algorithm, which combines the if and smap transformations to deal with arbitrary nesting, uses the properties of contexts as mentioned above.
+It unwinds one context at a time, starting with the deepest nesting level.
+The reason this results in a correct unwinding is that if a particular context has been unwound around a particular fetch, this fetch now lies in what was formerly the parent context.
+Since this parent context cannot have been as deeply nested as the now unwound child context, it itself has not been unwound yet since we go from high nesting to low nesting.
+At the same time since all contexts are eventually unwound the parent context has already been scheduled for unwinding.
+By induction all contexts fetches are eventually unwound completely.
+
+The correct order is achieved by using a work list of contexts to unwind.
+The list is obtained by collecting the set of all context stacks on fetches, adding all substacks, ordering by length and finally mapping to the topmost element of the stack.
+This last list is guaranteed to have no duplicates, due to the ``fully enclosed'' property of contexts.
+
+In order to be as efficient as possible transformations are performed in a stateful way.
+Individual transformation algorithms insert and delete nodes from the graph, insert and delete edges, as well as alter contexts for existing nodes or label new nodes with appropriate contexts.
+Currently no sanity checks for the validity of those alterations are present, therefore the individual transformations themselves are responsible for preserving the integrity of the graph and its associated metadata structures.
+This is not a hard limitation and might change in the future if we decide to allow more or user defined rewrites.
+
 %
 %\section{What is Context?}
 %
