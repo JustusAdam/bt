@@ -24,13 +24,13 @@ Therefore we have to build mappable structures specially for map operations.
 However the only data available to us to do that with are the successors to our node.
 Therefore we could only build mappable structures as large as the number of successors to our node.
 In order to attain reasonably sized programs however the number of successors a node can have is limited to a maximum of 6.
-Lastly Ohua is currently unable to handle mapping over empty collections, therefore we have to ensure that the generator tool does not generate maps over empty collections.
+Lastly Ohua is currently unable to handle mapping over empty collections and also sometimes issues arise when mapping over collections of only one element, therefore we have to ensure that the generator tool does not generate maps over empty collections and for safety reasons also no collections with only one element.
 
 When the appropriate command line parameters are given the generator randomly assigns the \texttt{Map} computation type to nodes.
 I have now tweaked the serialiser, which turns the graphs into actual source code to wrap the successors of the node into collections and generate a new independent function with which to map over the collection.
-Furthermore the generator has been tweaked to fix the arity for independent functions which are used for mapping to 1.
+Furthermore the generator has been tweaked to fix the arity for independent functions which are used for mapping to 2.
 This restriction is necessary since neither Haskell nor Ohua, our two main targets for code generation support multiple arity mapping.
-See produced code in Figure~\ref{fig:generated-map-code}. 
+See produced code in Figure~\ref{fig:generated-map-code}.
 
 \begin{figure}
 \begin{minted}{Clojure}

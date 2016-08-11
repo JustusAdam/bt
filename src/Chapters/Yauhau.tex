@@ -191,7 +191,14 @@ At the same time the topmost two inputs come from inside an if which means that 
 
 The structures which introduce issues like this are control flow structures, because they change how often or whether a particular section of code is executed.
 Unfortunately the flow of control in a program is not structurally visible in a dataflow graph.
-Therefore our accumulation transformation is unable to solve this problem.
+Therefore our accumulation transformation is unable to deal with this problem.
+
+There needs to be an additional preparation step before the batching transformation to produce an intermediate graph with certain properties such that the batching transformation is possible.
+The properties of the graph we want are that any fetch in the same round is control flow wise in the same context, aka gets called the same amount of times.
+Ensuring this particular property is more easiest if we simple pull every fetch so far out of its control flow context that it appears in the root context of the program.
+This would be analogous to pulling every fetch out into the main block of the \texttt{main} function in a C program, splitting the rest into parts between the fetches.
+Once our nodes are located there every fetch is guaranteed to be only ever called once per invocation of the program as a whole.
+Therefore our desired property of every fetch being executed the same amount of times holds and we can proceed with the transformation.
 
 In the following Chapters I will explain how we handle \texttt{smap} (Chapter~\ref{ch:smap-transformation}) and \texttt{if} (Chapter~\ref{ch:if-transformation}) and how we generalise the two to define a pluggable, general transformation which ensures we handle nesting correctly (Chapter~\ref{ch:Context}).
 

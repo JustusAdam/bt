@@ -75,7 +75,7 @@ ifExperimentSource =
 ifExperiment filename = do
     values <- readData ifExperimentSource
 
-    let groupedAndSorted = map (second $ percentagesToSomething fetches prctIfs) values
+    let groupedAndSorted = map (second $ percentagesToRounds prctIfs) values
 
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"

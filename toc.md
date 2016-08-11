@@ -18,6 +18,7 @@
         - redundant operators
     - subsequent IR optimisations
         - Find patterns of redundant operators and remove them
+        - Redundant smaps, because users could write something like that `(smap fetch list-of-requests)`
 - ? If semantics and differences to Haxl
     - Branches generally computed *after* the condition
     - can `seq` be used to force precomputing? (does it lead to a dependency circle? it shouldn't, because afaik the if transform inserts `value` operators on the branches if they consist of just a binding)
