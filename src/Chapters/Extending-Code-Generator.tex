@@ -1,3 +1,4 @@
+%!TEX root = ../thesis.tex
 \chapter{Extending the code generator}
 
 \label{ch:extending-code-generator}
@@ -7,7 +8,7 @@
 Adding meaningful mapping operations to is difficult.
 Meaningful mappings should be done over a large collection.
 However at the present the code we generate does not produce large mappable structures.
-It deals mostly with small numbers to avoid having to deal with the type system too much when generating code.
+It deals mostly with small numeric values to avoid having to deal with the type system too much when generating code.
 
 \subsection{Current status}
 
@@ -43,8 +44,16 @@ See produced code in Figure~\ref{fig:generated-map-code}.
 \begin{minted}{Haskell}
 ifnlocal3 param1 = ...
 main = do
-    length <$> mapM ifnlocal3 [local4, local5, local6]
+    a <- mapM ifnlocal3 [local4, local5, local6]
+    return (length a)
 \end{minted}
 \caption{Example for generated mapping code in Ohua and Haskell}
 \label{fig:generated-map-code}
 \end{figure}
+
+\section{Pattern based generation}
+
+\begin{itemize}
+  \item We would like to generate different code for different experiments, adhering to particular patterns
+  \item Future work, but should be quickly described here.
+\end{itemize}

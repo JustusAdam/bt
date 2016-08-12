@@ -116,9 +116,30 @@ As the result of our write request is only connected to the algorithm boundary v
 This all sounds counter intuitive, and it is.
 We would expect regular program semantics to hold in this case, which they do not do.
 There is of course still the \texttt{seq} operator, which we could use to enforce ordering and those semantics actually hold, even across algorithms.
-However we don't want to introcude this extra hurdle or even potential source of very frustrating errors as we break a common and sensible assumption a programmer might make.
+However we don't want to introduce this extra hurdle or even potential source of very frustrating errors as we break a common and sensible assumption a programmer might make.
 Therefore we would like to automate the addition of \texttt{seq} operators in the program where there are independent reads or writes that may cause unexpected indeterminism.
 
 \section{Rewrite}
 
 Fundamentally we only need to \texttt{seq} algorithms together when we have one of the typical read after write, write after write or read before write conflicts and the latter operator is data independent from the former.
+Therefore we must first identify the dependency relationships between the algorithms.
+
+We build a directed graph of data dependencies between algorithms by first finding all distinct algorithm context frames which have been assigned in the dataflow graph of our program.
+These context frames become the nodes of our dependency graph, which is a directed graph where edges represent data flowing from the source algorithm to the target algorithm.
+Edges are calculated by first finding a algo exit nodes, called \texttt{algo-out}.
+From an \texttt{algo-out} node we traverse the data dependencies of the program graph downwards until we either
+
+\begin{itemize}
+  \item encounter an \texttt{algo-in} node, in which case we insert an edge from the algorithm belonging to the \texttt{algo-out} node we started from to the algorithm belonging to the \texttt{algo-in} node we just encountered, into the dependency graph.
+    We do not explore this path further since following dependencies are guaranteed to be covered by transitive relationships.
+  \item encounter an \texttt{algo-out} node, in which case we are nested in another algorithm and we stop exploring this path since subsequent dependencies are covered by the enclosing algorithm.
+\end{itemize}
+
+Thus we obtain a version of a dataflow graph which only shows data dependencies between algorithms.
+
+Following that we assign labels to each algorithm indicating whether the algorithm in question performs reads and, or writes.
+This is done by compiling sets of algos with reads and writes.
+I filter the IR function list for \texttt{fetch} and \texttt{write} nodes.
+Map each node to its associated algo contexts, concatenate these and finally remove duplicate entries.
+Now we have a set of read and write performing algos respectively.
+Each algorithm in the graph is then labeled with \texttt{:does-read} and \texttt{:does-write} depending on which set it is member of.
