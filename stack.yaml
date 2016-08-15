@@ -39,7 +39,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/JustusAdam/haxl-test-generated-graph.git
-    commit: bba94280e57434a0db3f1b1d539a1b2c067983b5
+    commit: f0564ec7a50c09e26990eb353bfc39620c95b6c6
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps: []

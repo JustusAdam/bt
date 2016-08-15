@@ -67,20 +67,18 @@ smapExperiment filename = do
         layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
 
-ifExperimentSource =
-    [ ("Haxl", "plotting/haskell-if.json")
-    , ("Yauhau", "plotting/yauhau-if-monad.json")
-    ]
 
 ifExperiment filename = do
-    values <- readData ifExperimentSource
+    raw <- readDecOrFail "plotting/yauhau-if-monad.json"
 
+    let (inline, noinline) = partition ((== Just True) . (genConf >=> inlineIf)) raw
+    let values = [("Inline", inline), ("Precomputed", noinline)]
     let groupedAndSorted = map (second $ percentagesToRounds prctIfs) values
 
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
         layout_title .= "Transformation performance"
         layout_x_axis . laxis_title .= "Percentage of conditional nodes"
-        layout_y_axis . laxis_title .= "Number of total fetches performed"
+        layout_y_axis . laxis_title .= "Number of rounds performed"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
 
 ifExperimentDelayedSource =
@@ -89,8 +87,10 @@ ifExperimentDelayedSource =
     ]
 
 ifExperimentDelayed filename = do
-    values <- readData ifExperimentDelayedSource
+    raw <- readDecOrFail "plotting/yauhau-if-delayed-monad.json"
 
+    let (inline, noinline) = partition ((== Just True) . (genConf >=> inlineIf)) raw
+    let values = [("Inline", inline), ("Precomputed", noinline)]
     let groupedAndSorted = map (second $ percentagesToTime prctIfs) values
 
     liftIO $ toFile (def & fo_format .~ EPS) filename $ do
