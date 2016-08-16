@@ -3,16 +3,16 @@
 
 \label{ch:Ohua}
 
-Ohua\cite{Ohua:library:link} is parallelisation framework implemented in Java and Clojure.
+Ohua\cite{Ertel:2015:OID:2807426.2807431}\cite{Ohua:library:link} is parallelisation framework implemented in Java and Clojure.
 
 At compile time Ohua transforms the program into a dataflow graph.
 This graph is a representation of individual chunks of code of the program and the data dependencies between them.
 Since Ohua currently does not support recursion this graph is a DAG.
 Nodes are atomic pieces of code which are called stateful functions.
 Edges represent data dependencies.
-Edge direction indicates return and argument.
-The return of the source node is argument to the target node.
-The return value of one stateful function may be used by multiple other stateful functions and each stateful function can have multiple inputs or none at all.
+Edge direction indicates result and argument.
+The result of the source node is argument to the target node.
+The result value of one stateful function may be used by multiple other stateful functions and each stateful function can have multiple inputs or none at all.
 
 This dataflow graph can then be executed by a dataflow execution runtime which dynamically schedules the nodes of the graph.
 The runtime knows about the data dependencies between the nodes of the graph and therefore can schedule independent nodes in parallel.
@@ -41,13 +41,13 @@ However the runtime ensures that for each node the order of its subsequent invoc
 \section{Algorithms}
 
 Algorithms express high level, parallelisable computations in Ohua.
-These algorithms are written in Clojure using the \texttt{algo} macro.
+These algorithms are written in Ohua's Clojure EDSL using the \texttt{algo} macro.
 Algorithms use and combine stateful functions to express complex computations.
 Algorithms are generally assumed to be pure in so far as there are no data dependencies between any two functions which are not directly visible via function arguments and return values.
-No two functions should share data in ant way other then by explicitly passing them from one to the other via arguments and return.
+No two functions should share data in any way other then by explicitly passing them from one to the other via arguments and result.
 Furthermore there should not be any dependency on invocation ordering which is not expressed directly through data dependencies.
-As an example in Figure~\ref{fig:indeterministic-code} we can see  snippet of code where, if this were normal Clojure code, the read would be executed before the write due to the sequential, deterministic semantics of a Clojure \texttt{let} binding.
-In Ohua however, since there are no data dependencies between read and write, the execution order of those two stateful functions is not deterministic and they could even be executed simultaneously.
+The snippet of code in Figure~\ref{fig:indeterministic-code} for example: If this were normal Clojure code, the read would be executed before the write due to the sequential, deterministic semantics of a Clojure \texttt{let} binding.
+In Ohua however, since there are no data dependencies between \texttt{read} and \texttt{write}, the execution order of those two stateful functions is nondeterministic and they could even be executed simultaneously.
 When the algorithm is executed using the \texttt{ohua} or \texttt{<-ohua} macro the algorithms Clojure code is compiled into a dataflow graph and executed by the Ohua runtime.
 
 \begin{figure}
@@ -55,7 +55,7 @@ When the algorithm is executed using the \texttt{ohua} or \texttt{<-ohua} macro 
 (defalgo my-algo []
   (let [a (read-database)
         b (write-database)]
-    (comute a b)))
+    (compute a b)))
 \end{minted}
 \caption{An example of indeterministic code}
 \label{fig:indeterministic-code}
@@ -72,21 +72,25 @@ The description of the graph contains two elements:
 
 \begin{enumerate}
     \item \textbf{Bindings} are named data elements or alternatively can be interpreted as a data path.
-    Each binding has to be unique and constant, which means it can only be assigned to once, in which case we also speak of the \textit{creation} of the binding or of \textit{writing} the binding.
+    Each binding has to be unique and constant, which means it can only be assigned once, in which case we also speak of the \textit{creation} of the binding or of \textit{writing} the binding.
     However the binding may be read any number of times (including 0).
-    \item \textbf{(Stateful)Functions} are atomic pieces of code.
-    They are characterized by a function name which doubles as a reference to the code itself, its input parameters as a list of bindings and its return values, also a list of bindings.
-    This might be more analogous to a call site or function invocation in traditional jargon.
+    \item \textbf{Functions} represent call sites of stateful functions.
+    A function name references the stateful function which should be called.
+    A list of input, or parameter, bindings references the data which is expected as argument to the stateful function and a list of result bindings creates references to the data produced by the stateful function.
+    The same stateful function can be referenced by multiple IR functions, since IR functions represent call sites of a stateful function, not the stateful function itself.
     If a binding is present in a parameter list we also speak of the binding being \textit{read}.
-    Is the binding present in the return value list we also speak of the binding being \textit{written} or \textit{created}\footnote{Due to the uniqueness constraint \textit{writing} and \textit{creating} are the same here.}.
+    Is the binding present in the result bindings list we also speak of the binding being \textit{written} or \textit{created}\footnote{Due to the uniqueness constraint \textit{writing} and \textit{creating} are the same here.}.
 \end{enumerate}
 
-One of the benefits of this implementation is that is can be serialised easily into a human readable form.
 Any IR graph can be easily serialised into a Clojure \texttt{let} form preserving the semantics of the graph.
+The serialisation of the dataflow IR into a human readable form makes it easy to reason about semantics of the program, which in turn makes it easier for a programmer to debug the program.
+Additionally theoretical validity of a graph can be shown by showing that the corresponding Clojure program is valid.
 
 \subsection{Implementation}
 
-The actual implementation of the graph is simply a list of functions. Each function is a Clojure record with fields for a unique id, the name of the function, a vector of input bindings and a binding or a vector of bindings as return values.
+The actual implementation of the graph is simply a list of functions, see Figure~\ref{fig:concrete-ir-snippet}.
+Each function is a Clojure record with fields for a unique id, the name of the function, a vector of input bindings and a binding or a vector of bindings as result values.
+By moving result lists to the left and a putting a Clojure function call to the right this graph can be represented as a Clojure \texttt{let} form, see Figure~\ref{fig:ir-as-clojure}.
 
 \begin{figure}
 \begin{minted}{Clojure}
@@ -97,31 +101,34 @@ The actual implementation of the graph is simply a list of functions. Each funct
 	 (->IRFunc 2 "g" ['c] ['d 'e])])
 
 \end{minted}
-Which is equivalent to this Clojure \texttt{let} form
+\caption{Concrete IR snippet}
+\label{fig:concrete-ir-snippet}
 \begin{minted}{Clojure}
 (let [c (f a b)
-      [d e] (g c)])
+      [d e] (g c)]
+  [d e])
 \end{minted}
-\caption{IR representation snippet}
+\caption{IR representation as Clojure program}
+\label{fig:ir-as-clojure}
 \end{figure}
 
-\subsection{Interpretation}
-
-This IR encodes a DAG.
-The direction is given by the flow of data, from output to input.
-The graphs have to be acyclic.
-This is a restriction currently imposed by the underlying Ohua framework but it is also embraced by the algorithms in this thesis because it allows simpler implementations.
-In the future this restriction may be lifted, at least internally, to allow more optimisations and flexibility.
-
-Functions are nodes.
-I hereby mean a function as a concrete call site including input and output bindings.
-This is in contrast to \textit{function names} which are simply labels to the node describing its functionality.
-
-Bindings are edges.
-Each named binding represents multiple edges, including none.
-Bindings are \textit{write once}, hence any binding may only occur once as a return value but may be used an arbitrary number of times as input value.
-As a result all edges represented by a particular binding originate from the same node.
-Furthermore the graph must be complete, as in any binding read must have previously been written.
-For each time a binding is read it represents an edge from its source node to the reading node.
-Thus a binding which is never read creates no edges.
-For conversion into an executable Ohua graph the ordering of functions in the IR is irrelevant, no topological sort is required.
+% \subsection{Interpretation}
+%
+% This IR encodes a DAG.
+% The direction is given by the flow of data, from output to input.
+% The graphs have to be acyclic.
+% This is a restriction currently imposed by the underlying Ohua framework but it is also embraced by the algorithms in this thesis because it allows simpler implementations.
+% In the future this restriction may be lifted, at least internally, to allow more optimisations and flexibility.
+%
+% Functions are nodes.
+% I hereby mean a function as a concrete call site including input and output bindings.
+% This is in contrast to \textit{function names} which are simply labels to the node describing its functionality.
+%
+% Bindings are edges.
+% Each named binding represents multiple edges, including none.
+% Bindings are \textit{write once}, hence any binding may only occur once as a result value but may be used an arbitrary number of times as input value.
+% As a result all edges represented by a particular binding originate from the same node.
+% Furthermore the graph must be complete, as in any binding read must have previously been written.
+% For each time a binding is read it represents an edge from its source node to the reading node.
+% Thus a binding which is never read creates no edges.
+% For conversion into an executable Ohua graph the ordering of functions in the IR is irrelevant, no topological sort is required.

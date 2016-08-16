@@ -2,6 +2,12 @@
 
 \label{ch:smap-transformation}
 
+\section{Related work}
+
+% Dynamic data structure -> no issues
+
+\section{Simplified}
+
 Aim of the smap transformation step is to merge a bounded number of fetches into a single fetch.
 How many times the fetch would be executed is not known at compile time but only given at runtime by the length of the collection which is being mapped over.
 Basis for the transformation itself is that a mapping operation over two composed functions is semantically identical to the composition one mapping operation with one function each, in the same order.

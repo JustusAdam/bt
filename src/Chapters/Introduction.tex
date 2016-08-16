@@ -3,6 +3,9 @@
 
 \label{ch:Intro}
 
+
+% TODO the intro is a bit twisted: normally an intro goes by this structure: problem, missing solutions, contributions, outline (I like it when the last two are co-mingled.)
+
 This thesis concerns itself with the extension and improvement of \yauhau{}, an IO optimisation compiler plugin for the Ohua framework.
 \yauhau{} was first introduced in the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016}.
 In the paper, which was written by Sebastian Ertel, Andres Goens, Jeronimo Castrillon and myself, we explained how \yauhau{} rewrites a program to achieve efficient IO whilst allowing the programmer to write very concise and straight forward code.
@@ -12,8 +15,8 @@ In this thesis I want to explain in much more detail the concrete ways in which 
 Chapter~\ref{ch:smap-transformation} concerns itself with \texttt{smap} and Chapter~\ref{ch:if-transformation} explains in more detail the handling of \texttt{if}.
 I also want to introduce the reader to a new generalised concept, called context (Chapter~\ref{ch:Context}), which has now been added to Ohua and allows the correct handling of nested control flow structures.
 At the beginning however I will introduce the reader to the underlying Ohua (Chapter~\ref{ch:Ohua}) framework and the basics of the \yauhau{}~\ref{ch:Yauhau} plugin, the former of which includes a description and examples of the dataflow IR metioned earlier and the latter of which description of the basic IO batching transformation.
-After finishing with contexts I will introduce another recent addition to \yauhau{} which we hintd at briefly in the paper, side effects.
-Chapter~\ref{ch:side-effects} introduces the concept of controlled side effects in a functional and parallel system such as Ohua by means of the \yauhau{} plugin and how we intend to preserve semantics with regards to caching as well as read-write conflicts.
+After finishing with contexts I will introduce another recent addition to \yauhau{} which we hinted at briefly in the paper, side effects.
+Chapter~\ref{ch:side-effects} introduces the concept of controlled side effects in a functional and parallel system such as Ohua by means of the \yauhau{} plugin and how we intend to preserve semantics with regards to caching as well as read-write conflicts, whilst enabling easy and straight forward modularity.
 
 Contributions of this thesis are:
 \begin{itemize}
