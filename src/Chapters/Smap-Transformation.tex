@@ -1,16 +1,13 @@
+%!TEX root = ../thesis.tex
 \chapter{Smap Transformation}
 
 \label{ch:smap-transformation}
-
-\section{Related work}
-
-% Dynamic data structure -> no issues
 
 \section{Simplified}
 
 Aim of the smap transformation step is to merge a bounded number of fetches into a single fetch.
 How many times the fetch would be executed is not known at compile time but only given at runtime by the length of the collection which is being mapped over.
-Basis for the transformation itself is that a mapping operation over two composed functions is semantically identical to the composition one mapping operation with one function each, in the same order.
+Basis for the transformation itself is that a mapping operation over two composed functions is semantically identical to the composition of one mapping operation with one function each, in the same order.
 
 \begin{verbatim}
 map (f . g) == map f . map g
@@ -53,7 +50,7 @@ The splitting is therefore not done with maps, but special nodes which start and
 The Ohua mapping operation is called \texttt{smap} and consists at IR level of several operators, the two interesting ones being \texttt{smap} (internally called \texttt{smap-fun}) and \texttt{collect}.
 \texttt{smap} is the starting operator and provides the mapping functionality by continuously emitting items from a collection until the collection is empty.
 \texttt{collect} is the opposite and only receives items until the collection is rebuilt.
-Both also obtain information as to the size of the collection in order to function correctly.
+Both also obtain information such as the size of the collection in order to function correctly.
 
 The \texttt{smap} transformation as implemented in \yauhau{} simply inserts a collect operator before the fetch to rebuild the collection and a tree builder node to wrap it.
 The collect operator is also fed the size of the original collection.
@@ -61,8 +58,8 @@ A new \texttt{smap} operator is inserted after the fetch to break the list into 
 A graphical example of this can be seen in Figure \ref{ch:smap-transformation}.
 
 \begin{figure}[h]
-	\includegraphics[width=.5\textwidth]{Figures/smap-rewrite-original}
-	\includegraphics[width=.5\textwidth]{Figures/smap-rewrite}
+	\includegraphics[width=\textwidth]{Figures/smap-rewrite-original}
+	\includegraphics[width=\textwidth]{Figures/smap-rewrite}
 	\label{figure:smap-transformation}
 	\caption{Smap transformation}
 \end{figure}
@@ -70,7 +67,7 @@ A graphical example of this can be seen in Figure \ref{ch:smap-transformation}.
 \section{Encoding}
 
 The structure of the nested smap is saved in a tree structure.
-We use an unlabeled rose tree.
+We use an unlabeled rose tree\cite{MALCOLM1990255}.
 It is important to use a tree structure because we would like to be able to support arbitrarily deep levels of nesting.
 The Java programmer will recognise the Composite Pattern in the definition of our tree, which comprises of an abstract tree base class, Figure \ref{figure:tree-impl-base-class}.
 
@@ -156,3 +153,5 @@ Lastly our leaf nodes are simply requests, as the basic \texttt{Request} also ex
 
 This rose tree encodes, in a data structure, the nested structure of the smap context.
 The height of the tree equals the depth of smap nesting that was encoded.
+
+% TODO explain why rose tree

@@ -5,15 +5,18 @@
 \newcommand{\opite}{\texttt{ifThenElse}}
 \newcommand{\opselect}{\texttt{select}}
 
-\section{Related work}
-
-% Dynamic data structure -> no issues
 
 \section{Transformation simplified}
 
-The if construct in the Ohua framework, behaves like a curried function.
-Input to the function is a boolean value and output is either the result of computing the true or the false branch.
-Input values to the two conditional branches are curried from the outside.
+
+The if construct in the Ohua comprises essentially of three parts.
+First an operator called \texttt{ifThenElse} which evaluates the condition.
+Output of this operator are two so called \emph{context arcs}, which is a dataflow device to activate, or not activate a branch of the graph at runtime.
+Second there are two subgraphs, one representing the code to execute if the condition is \texttt{true} and one to execute if the condition evaluates to false.
+And lastly an operator called \texttt{select} which combines the output of the two subgraphs.
+The two \emph{context arcs} from the \texttt{ifThenElse} operator are each connected to one of the subgraphs.
+Depending on whether the condition evaluates to \texttt{true} or \texttt{false} one of the subgraphs is activated my sending a packet down the respective \emph{context arc}.
+The \texttt{select} operator then propagates the result from the activated subgraph to the rest of the program.
 
 
 \subsection{Splitting branches}
@@ -21,7 +24,7 @@ Input values to the two conditional branches are curried from the outside.
 We can apply a very similar method of decomposition as we did with smap.
 To keep the transformation simple we assume both branches to have an equal number of fetches such that always two fetches, one from each branch, can be merged together.
 If we merge one fetch from each branch we know that no matter the condition, exactly one of them is going to have input present.
-Hence if we select whichever input is present and feed it to our single, merged fetch it is guaranteed to have input no matter the condition.
+Hence if we select whichever input is present and feed it to our single merged fetch it is guaranteed to have input no matter the condition.
 Afterwards we will ensure the output from \fetch{} is fed back into the continuation of the branch the input came from.
 
 A simple demonstration of this transformation in Haskell code.
@@ -58,37 +61,14 @@ if cond
 \subsection{Fetch imbalance}
 
 We previously assumed that both branches held an equal number of fetches and that these could be paired up neatly in twos.
-However in real programs this may not be the case at all, see Figure \ref{fig:if-trans-code-uneq-before}.
+However in real programs this may not be the case at all, see Figure \ref{fig:if-insert-empty-parallel-before}.
 There is a simple solution to this problem.
-We solve the imbalance of fetches by inserting empty (NoOp) fetches at the front of the branch with fewer fetches, see Figure \ref{fig:if-trans-code-uneq-inserted}.
+We solve the imbalance of fetches by inserting empty (NoOp) fetches at the front of the branch with fewer fetches, see Figure~\ref{if-insert-empty-parallel-after-insert} .
 
 \begin{figure}
-\begin{verbatim}
-if cond
-    then afterTrue . fetch . beforeTrue
-    else falseBranch
-\end{verbatim}
-\caption{Code with unequal number of fetches}
-\label{fig:if-trans-code-uneq-before}
-\begin{verbatim}
-if cond
-    then afterTrue         . fetch . beforeTrue
-    else const falseBranch . fetch . mkEmptyRequest
-\end{verbatim}
-%(if cond then afterTrue else const falseBranch) . fetch . (if cond then beforeTrue else mkEmptyRequest)
-\caption{Inserting an empty fetch}
-\label{fig:if-trans-code-uneq-inserted}
-\begin{verbatim}
-(if cond
-     then afterTrue
-     else const falseBranch)
-. fetch
-. (if cond
-       then beforeTrue
-       else mkEmptyRequest)
-\end{verbatim}
-\caption{Transformed code with unequal number of fetches}
-\label{fig:if-trans-code-uneq-after}
+    \includegraphics[width=\linewidth]{../Figures/if-insert-empty-parallel-before}
+    \caption{Graph of a graph with imbalanced fetches in conditional}
+    \label{fig:if-insert-empty-parallel-before}
 \end{figure}
 
 Originally I would create the empty fetches by collecting an ordered list of fetches on each branch.
@@ -97,11 +77,19 @@ After that I would calculate the difference in length between both lists to obta
 Then I would generate a sequence of request-fetch pairs as long as the calculated difference.
 These would then be connected in sequence.
 The first one would receive input from the last fetch of the shorter of the two previously calculated sequences of preexisting fetches.
+An example of this can be seen in
+
 Since these are NoOp they ignore their inputs, we use the inputs only to create data dependencies.
 If the shorter sequence of preexisting fetches was empty a new operator \texttt{null} would be created and inserted.
 This operator would not get input at all, except for a context arc from the \texttt{if} and emit a data packet containing \texttt{null} used to activating the first created fetch.
 The second request-fetch pair would receive as input the result from the first fetch and the third one the result from the second and so on.
-The final result was discarded
+The final result was discarded.
+
+\begin{figure}
+    \includegraphics[width=\linewidth]{../Figures/if-insert-empty-parallel-after-insert}
+    \caption{Insertion of empty requests and fetches}
+    \label{if-insert-empty-parallel-after-insert}
+\end{figure}
 
 There is a significant problem with this approach, which is, and I only realised this late, that this created sequence is fully dependent.
 Meaning each fetch depends on \textbf{all} of its predecessor fetches.
@@ -113,16 +101,23 @@ In the the second branch each fetch was dependent on all previous fetches in the
 And since this is true for all fetches in the branch each of those will be in a separate round.
 They can still be batched with other, parallel parts of the program, however we have lost the opportunity for some batching here, because we have forced sequentiality, even if it may not have existed originally.
 
+
 There is a very simple solution to this problem, which, coincidentally, also simplified the implementation of the algorithm as a whole.
 Now I always generate a \texttt{null} operator with no dependency other than the \texttt{if}, a single NoOp request creating operator, the output of which is fed into a number of generated fetches.
 Therefore we only create one request, which reduces the number of operators, and the fetches depend only on the \texttt{if} operator.
 Therefore they could in theory all be batched.
 If we now merge the branches our empty requests will create no new dependencies, since they have the least dependency possible in the branch.
 
-The observant reader will have noticed this only solves the problems for empty requests but does not take into account how the preexisting fetches on those branches may differ in dependencies and may influence and delay each other when merging.
-This will be subject of future improvements where we aim to increase efficiency my separately batching subgraphs of the program and this, we hope, should lead to an optimal result in that case as well.
+\begin{figure}
+    \includegraphics[width=\linewidth]{../Figures/if-insert-empty-better-after-insert}
+    \caption{Better approach to empty requests and fetches}
+    \label{if-insert-empty-better-after-insert}
+\end{figure}
 
-Now we can apply the transformation as we did before, see Figure \ref{fig:if-trans-code-uneq-after}.
+The observant reader will have noticed this only solves the problems for empty requests but does not take into account how the preexisting fetches on those branches may differ in dependencies and may influence and delay each other when merging.
+This will be subject of future improvements where we aim to increase efficiency by separately batching subgraphs of the program and this, we hope, should lead to an optimal result in that case as well.
+
+Now we can apply the transformation as we did before.
 
 \section{Transformation in operators}
 

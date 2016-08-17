@@ -1,0 +1,50 @@
+%!TEX root = ../thesis.tex
+\chapter{Related Work}
+
+\label{ch:related-work}
+
+\section{Similar systems and inspiration}
+
+\subsection{Haxl}
+
+\subsection{Datasources}
+
+Datasources can be arbitrary user defined targets for IO actions such as databases, network requests or filesystem IO.
+However datasources must be defined separately and only for those defined datasources the optimisation can be leveraged.
+
+Defining a datasource in Haxl means defining a set of actions on the source in form of a GADT.
+
+\begin{minted}{Haskell}
+data FacebookRequest a where
+    GetFriends :: UserID -> FacebookRequest [UserID]
+    GetProfile :: UserID -> FacebookRequest Profile
+\end{minted}
+
+Every time you want to make a request in the program it has to be encoded into one of those actions when passed to the IO action executing function \texttt{dataFetch}.
+
+Additionally, for the cache, the \texttt{Hashable} typeclass needs to be implemented on this type as well as the \texttt{DataSourceName} and \texttt{StateKey} typeclass to identify the source.
+
+The actual execution of the IO action is defined in a typeclass called \texttt{DataSource} which also has to be defined on the request type.
+The \texttt{DataSource} typeclass has a method called \texttt{fetch} which does the actual work of performing the desired IO action.
+
+\begin{minted}{Haskell}
+class DataSource u request where
+    fetch :: ... -> [BlockedFetch request] -> PerformFetch
+\end{minted}
+
+As its type signature indicates the \texttt{fetch} method performs the IO action on multiple requests simultaneously and this is where the batching happens.
+
+When the framework executes the actions each datasources gets all the requests for that particular datasource. Therefore all actions which can be batched together should be defined on the same datasource (in the same GADT) and actions which cant be batched should be defined on separate datasources.
+
+
+\section{Map}
+
+% Dynamic data structure -> no issues
+
+\section{If}
+
+% Dynamic data structure -> no issues
+
+\section{Side effects}
+
+% No side effects in Haxl and Muse / uncontrolled

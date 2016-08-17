@@ -21,9 +21,9 @@ Its only concern is to correctly handle nesting.
 Therefore it simply dispatches rewrites based on type of context encountered.
 Rewrites are basically just implementations of an interface.
 
-\subsection{Straightforward but messy}
+\subsection{No complicated edge case optimisation}
 
-No optimisation for special cases.
+No regards for special cases unless necessary for semantic correctness.
 Algorithms should handle the problem as generic as possible.
 This makes the implementation simpler, as less special cases have to be distinguished.
 The generic implementation of course is required to be semantic preserving for all cases, which often means inserting redundant operators.
@@ -68,4 +68,4 @@ Both context arcs are connected to the respective recipients.
 \subsection{Merge selects}
 
 The \texttt{select} operator is multiple arity.
-Therefore if two select operators immediately follow each other it is safe to simple wire all inputs of the first one directly into the second one.
+Therefore if two select operators immediately follow each other it is safe to simply wire all inputs of the first one directly into the second one.

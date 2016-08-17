@@ -5,13 +5,9 @@
 In the application domain of \yauhau{}, which is a program that accesses a remote resource, like a database or some repository over the network, side effects are actions which modify the remote resource.
 They are called side effects because they violate the rules of referential transparency.
 Referential transparency is a property of pure functions and means that the result of a computation does not change, if the call sites of the referentially transparent functions are replaced by their result.
-In \yauhau{} we make the assumption that, even though we do not control the implementation of the fetch performed by the datasource or have control over the remote source, read requests are pure actions.
+In \yauhau{} we make the assumption that, even though we do not control the implementation of the fetch performed by the data source or have control over the remote source, read requests are pure actions.
 This allows us to cache results and remove duplicate requests.
 In practice the remote resource may of course change as the program runs which is why we allow the programmer to choose an appropriate caching strategy with the desired tradeoff between performance and error.
-
-\section{Related work}
-
-% No side effects in Haxl and Muse / uncontrolled
 
 \section{Current implementation}
 
@@ -21,8 +17,8 @@ Effectful actions are of course already supported by Ohua, however as mentioned 
 Therefore the programmer would either have to accept the possibility of errors or relinquish the use of a cache, which has profound impacts on performance.
 
 We solve this issue in \yauhau{} by specifically implementing write requests.
-These special write operators are not only able to access the network in a user defined way, but it also informs the cache of the performed request.
-When the user defines a cache to use he can also provide a function for how to manipulate the cache as a result of this request.
+These special \texttt{write} operators are not only able to access the network in a user defined way, but it also informs the cache of the performed request.
+When the user defines a cache he can also provide a function for how to manipulate the cache as a result of this request.
 Two simple predefined actions are available by default \texttt{dropOne} and \texttt{dropAll}.
 The former drops a request from the cache matching the current one and the latter clears the entire cache.
 
@@ -50,7 +46,7 @@ public interface Cache {
 \section{Enforcing order intra algorithm}
 
 This allows programmers to obtain correct read-write semantics, however it still poses an issue due to ordering.
-In ohua order of execution is only guaranteed for operators with explicit data dependencies.
+In Ohua order of execution is only guaranteed for operators with explicit data dependencies.
 In the example in Figure~\ref{fig:independent-actions-code} for instance it is entirely indeterministic whether the read or write is going to be executed first.
 This problem can be avoided by using an operator called \texttt{seq}.
 \texttt{seq} enforces its first argument to be fully evaluated before allowing its second argument to be evaluated.

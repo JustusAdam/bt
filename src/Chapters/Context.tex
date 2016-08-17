@@ -13,7 +13,9 @@ However even though the smap transformation correctly handles smaps nested in sm
   (smap
     (algo [val]
       (if some-condition
-        (smap (algo )))))
+        (smap (algo [item] (compute-something (fetch item)))
+          val)
+        (some-operation val))))
 \end{minted}
 \caption{Nested context example}
 \label{fig:nested-context-example}
@@ -21,7 +23,7 @@ However even though the smap transformation correctly handles smaps nested in sm
 
 \section{Definition}
 
-In order to handle these interleaved nestings and allow the resulting algorithm to be extensible in the future, aka allow definition of new such constructs and define ways to handle it, a general abstraction is necessary.
+In order to handle these interleaved nestings and allow the resulting algorithm to be extensible in the future, i.e. allow definition of new such constructs and define ways to handle it, a general abstraction is necessary.
 The concept we decided to introduce in Ohua is called a context.
 And contexts in the Ohua sense are much more general than if or smap or even control flow structures.
 Contexts now solve an issue underlying the internal representation of the program.
@@ -31,7 +33,7 @@ Control flow structures such as smap and if for instance change the properties o
 In order to determine whether a certain node has such properties we need to look and interpret the actual labels of the nodes.
 
 Context is the general name we give these not structurally emergent properties of a subgraph.
-The context type is a label which refers to the behaviour of that particular context, aka \texttt{if} or \texttt{smap}.
+The context type is a label which refers to the behaviour of that particular context, i.e. \texttt{if} or \texttt{smap}.
 An instance of a context is a concrete node in the dataflow graphs
 
 \subsection{The stack}
@@ -49,9 +51,8 @@ A context stack is a ordered list of nested contexts a node is contained in.
 
 \subsubsection{Definitions}
 
-If there are two context stacks $s_1$ and $s_2$ and the successive removal of elements from the top of $s_1$ yields $s_2$, $s_1 \rightarrow_{pop} s_2$, then we say $s_1$ is \textit{nested} in $s_2$ and $s_2$ is a \textit{subcontext} of $s_1$.
+If there are two context stacks $s_1$ and $s_2$ and the successive removal of elements from the top of $s_1$ yields $s_2$, $s_1 \rightarrow_{pop} s_2$, then we say $s_1$ is \textit{nested} in $s_2$ or a \emph{child context} of $s_2$ and $s_2$ is a \textit{subcontext} or \emph{parent context} of $s_1$.
 Context effects aggregate in a context stack.
-
 
 
 \subsubsection{Properties}
@@ -63,9 +64,9 @@ There are a few general properties which can be asserted about contexts in the O
         This means that in a normal program two contexts never partially overlap.
         They are either disjoint or one is fully contained in the other.
   \item \textbf{Contexts are an inherited property.}
-        Nodes which are not special, context changing nodes such as \texttt{smap} or \texttt{ifThenElse} inherit their context from their parents.
-        Briefly said a node N is in every context any of its parent nodes is in.
-        Since, as mentioned above, contexts do not partially contexts of parent nodes are always rooted subcontexts of one another.
+        Nodes which are not special, context changing nodes such as \texttt{smap} or \texttt{ifThenElse} inherit their context from their preceding nodes.
+        Briefly said a node N is in every context any of its preceding nodes is in.
+        Since, as mentioned above, contexts do not partially overlap, contexts of preceding nodes are always rooted subcontexts of one another.
 \end{itemize}
 
 We can also see that contexts are special in Ohua since they are not available to the user and what I mean by that is all known contexts use special dataflow operators for their implementation, because stateful functions are not powerful enough.
@@ -78,7 +79,7 @@ We can also see that contexts are special in Ohua since they are not available t
 The detection algorithm for contexts went through several iterations.
 Originally the context detection was performed only in \yauhau{} as contexts seemed only useful when unwinding them to prepare the batching transformation.
 The former detection algorithm employed a strategy whereby the graph would be traversed in topological order.
-Each nodes context would be calculated from the maximal context out of the contexts from the parent nodes (see inheritance property).
+Each nodes context would be calculated from the maximal context out of the contexts from the preceding nodes (see inheritance property).
 Maximal context here means the most deeply nested (see full enclosure property).
 Then depending on the type of node this context stack would be transformed.
 
@@ -93,6 +94,8 @@ The node would then be labeled with the transformed context stack.
 
 \subsection{Current}
 
+% TODO contexts were not introduced because of yauhau
+
 After the detection moved into the Ohua project the site of context detection was moved as well.
 Additionally new types of context are now recognised, such as \texttt{algo} and \texttt{seq}.
 Context detection in Ohua is now done right when the Clojure code is being transformed into the IR.
@@ -101,9 +104,9 @@ When we traverse the AST and we encounter a context introducing function like sm
 This overwrites any previous marker.
 What we end up with, as a result, is an IR, where every node has, in its metadata, a reference to its closest context starting node.
 The context starting node then has a reference to its nearest outer context and thus we can rebuild the entire context stack for each node afterwards.
-For this we use dynamic programming by populating a HashMap with the stacks for each node reusing previously computed results to save memory.
+For this we use dynamic programming by populating a HashMap with the stacks for each node, reusing previously computed results.
 This can be done safely because Clojure standard library data structures like \texttt{Vector} are immutable and therefore safe to reuse.
-After this process is completed we obtain a Map from node ids to complete, resolved context stacks which is handed to subsequent transformations.
+After this process is completed we obtain a Map from node ids to completely resolved context stacks which is handed to subsequent transformations.
 
 \section{Unwinding nested context}
 
