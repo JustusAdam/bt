@@ -8,15 +8,18 @@
 
 This thesis concerns itself with the extension and improvement of \yauhau{}, an IO optimisation compiler plugin for the Ohua framework.
 \yauhau{} was first introduced in the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016}.
-In the paper, which was written by Sebastian Ertel, Andres Goens, Jeronimo Castrillon and myself, we explained how \yauhau{} rewrites a program to achieve efficient IO whilst allowing the programmer to write very concise and straight forward code.
+In the paper, which was written by Sebastian Ertel, Andrés Goens, Jeronimo Castrillon and myself, we explained how \yauhau{} rewrites a program to achieve efficient IO whilst allowing the programmer to write very concise and straight forward code.
 We also alluded to some of the issues that arise from control flow when performing the \yauhau{} transformation and we briefly outlined the solutions that we developed.
 
 In this thesis I want to explain in much more detail the concrete ways in which I handle control flow in \yauhau{} and explain implementation considerations and decisions made during and after writing of the paper but which we unfortunately did not have space for in the paper itself.
 Chapter~\ref{ch:smap-transformation} concerns itself with \texttt{smap} and Chapter~\ref{ch:if-transformation} explains in more detail the handling of \texttt{if}.
 I also want to introduce the reader to a new generalised concept, called context (Chapter~\ref{ch:Context}), which has now been added to Ohua and allows the correct handling of nested control flow structures.
-At the beginning however I will introduce the reader to the underlying Ohua (Chapter~\ref{ch:Ohua}) framework and the basics of the \yauhau{}~\ref{ch:Yauhau} plugin, the former of which includes a description and examples of the dataflow IR metioned earlier and the latter of which description of the basic IO batching transformation.
-After finishing with contexts I will introduce another recent addition to \yauhau{} which we hinted at briefly in the paper, side effects.
-Chapter~\ref{ch:side-effects} introduces the concept of controlled side effects in a functional and parallel system such as Ohua by means of the \yauhau{} plugin and how we intend to preserve semantics with regards to caching as well as read-write conflicts, whilst enabling easy and straight forward modularity.
+After that in Chapter\ref{ch:trans-implementation} I will briefly describe some general implementation decisions for \yauhau{} and optimisations which were added.
+
+Following the contexts I will introduce another recent addition to \yauhau{} which we hinted at briefly in the paper, side effects and how to handle them semantically (Chapter\ref{ch:side-effects}).
+This chapter introduces the concept of controlled side effects in a functional and parallel system such as Ohua by means of the \yauhau{} plugin and how we intend to preserve semantics with regards to caching as well as read-write conflicts, whilst enabling easy and straight forward modularity.
+
+At the beginning however I will introduce the reader to the underlying Ohua framework (Chapter~\ref{ch:Ohua}) and the basics of the \yauhau{}~\ref{ch:Yauhau} plugin, the latter of which includes a description of the basic IO batching transformation.
 
 Contributions of this thesis are:
 \begin{itemize}
@@ -26,7 +29,7 @@ Contributions of this thesis are:
     \item An evaluation of the effect of precomputed conditional branches on latency.
     \item New \textbf{experiments} showing the performance of the \yauhau{} plugin in comparison to the existing technologies Haxl and Muse in \textbf{programs with conditionals and mapping}.
     \item \textbf{Extensions to the random code generator}~\cite{Goens-rand-code-graph} used in the \yauhau{} paper to generate test programs.
-    These extenstions enable \textbf{support for mapping operations} in the code generator.
+    These extenstions enable \textbf{support for mapping operations} as well as different \textbf{generation methods for conditionals} in the code generator.
 \end{itemize}
 
 %

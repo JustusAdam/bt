@@ -1,5 +1,4 @@
 .DS_Store
-*.pdf
 *.aux
 /_shake/
 /_build/
@@ -23,3 +22,5 @@
 *.pygtex
 .texpadtmp
 _minted-thesis
+thesis.pdf
+thesis.old.pdf

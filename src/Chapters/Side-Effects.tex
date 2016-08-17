@@ -2,6 +2,15 @@
 \chapter{Side Effects}
 \label{ch:side-effects}
 
+% TODO
+% Figure 8.1 is never referenced or explained in the text.
+% “These are typical semantics as would be expected of a program written in a non-sequential language like Haskell.” -> true, which breaks modularity and it breaks the batching of Haxl across functions as argued in our paper.
+% “similar situation to above” -> “similar situation as above”
+% “there is not” -> “there is no”
+% “This all sounds counter intuitive and it is.” -> this sounds negative. Ohua tries to do something new and thereby diverges from existing conventions. I think, this is required in order to address these multi-core issues.
+% “However, we don’t …” This contradicts what you just said two sentences before when you argued that Ohua’s program semantics are counter intuitive and therefore a source of errors. -> The point is that seq would create the program semantics of a “normal” program and therewith break its efficiency by reducing opportunities to execute functions in parallel. (See the experiment in 11.1)
+% 8.4: would benefit from describing the algorithm either in pseudo-code or Clojure code. section seems incomplete because you do not explain the final rewrite.
+
 In the application domain of \yauhau{}, which is a program that accesses a remote resource, like a database or some repository over the network, side effects are actions which modify the remote resource.
 They are called side effects because they violate the rules of referential transparency.
 Referential transparency is a property of pure functions and means that the result of a computation does not change, if the call sites of the referentially transparent functions are replaced by their result.
@@ -43,7 +52,7 @@ public interface Cache {
 \label{fig:the-cache-interface}
 \end{figure}
 
-\section{Enforcing order intra algorithm}
+\section{Enforcing intra algorithm order}
 
 This allows programmers to obtain correct read-write semantics, however it still poses an issue due to ordering.
 In Ohua order of execution is only guaranteed for operators with explicit data dependencies.
