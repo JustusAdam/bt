@@ -10,14 +10,20 @@
 
 
 The if construct in the Ohua comprises essentially of three parts.
-First an operator called \texttt{ifThenElse} which evaluates the condition.
-Output of this operator are two so called \emph{context arcs}, which is a dataflow device to activate, or not activate a branch of the graph at runtime.
+A visual representation can be seen in Figure~\ref{fig:if-in-operators}.
+First an operator called \texttt{ifThenElse}\footnote{I often abbreviate this by just calling it \texttt{if}} which evaluates the condition.
+Output of this operator are two so called \emph{context arcs}, which is a dataflow device to activate, or not activate a branch of the graph at runtime, represented in the Figure~\ref{fig:if-in-operators} by dotted lines.
 Second there are two subgraphs, one representing the code to execute if the condition is \texttt{true} and one to execute if the condition evaluates to false.
 And lastly an operator called \texttt{select} which combines the output of the two subgraphs.
 The two \emph{context arcs} from the \texttt{ifThenElse} operator are each connected to one of the subgraphs.
 Depending on whether the condition evaluates to \texttt{true} or \texttt{false} one of the subgraphs is activated my sending a packet down the respective \emph{context arc}.
 The \texttt{select} operator then propagates the result from the activated subgraph to the rest of the program.
 
+\begin{figure}
+    \includegraphics[width=\linewidth]{../Figures/if-in-operators}
+    \caption{If represented in operators}
+    \label{fig:if-in-operators}
+\end{figure}
 
 \subsection{Splitting branches}
 
@@ -27,35 +33,23 @@ If we merge one fetch from each branch we know that no matter the condition, exa
 Hence if we select whichever input is present and feed it to our single merged fetch it is guaranteed to have input no matter the condition.
 Afterwards we will ensure the output from \fetch{} is fed back into the continuation of the branch the input came from.
 
-A simple demonstration of this transformation in Haskell code.
-Both branches consist of calculations before the fetch and after the fetch and a fetch in between, see Figure \ref{fig:if-trans-code-before}.
-In order to select the present input we first bundle the before calculations into their own if construct.
-This construct now returns a request for our fetch independent of the condition.
-We feed the request to fetch.
-We use the same condition from before to select the appropriate continuation branch and call it with the value returned from the fetch, see Figure \ref{fig:if-trans-code-after}.
-As with the smap transformation this simplified model ignores the fact that not every computation can be decomposed into \texttt{after . fetch . before}, however as in smap the transformation is still correct because we are in the land of dataflow.
-In practice we only close the if or smap around the fetch itself and do not touch other parts of the graph.
-This way we preserve as much data independence as possible, which leads to more opportunities for Ohua to parallelise.
+As an exemplary graph in Figure~\ref{fig:if-trans-before} we see two branches, each with a fetch somewhere in them.
+We cannot be sure which fetch gets executed when this code is run, however we know for certain that exactly one of them gets executed.
+Therefore we insert a \texttt{select} operator into the graph which returns whichever input data was present and fetch that, see the red path in Figure~\ref{fig:if-trans-before} and \ref{fig:if-trans-merged}.
+After that we wire the result into all places of the rest of \textbf{both} branches wherever one of the fetches was used.
+We insert context arcs from the \texttt{if} operator to those places to make sure they run only if the respective branch was selected.
+Any other data flow between the sections before and after the \texttt{fetch} are left unchanged, see the blue arrows in Figure~\ref{fig:if-trans-before} and \ref{fig:if-trans-merged}.
 
 \begin{figure}
-\begin{verbatim}
-if cond
-    then afterTrue  . fetch . beforeTrue
-    else afterFalse . fetch . beforeFalse
-\end{verbatim}
-\caption{Code before transform}
-\label{fig:if-trans-code-before}
-\begin{verbatim}
-(if cond
-     then afterTrue
-     else afterFalse)
-. fetch
-. (if cond
-       then beforeTrue
-       else beforeFalse)
-\end{verbatim}
-\caption{Code after transform}
-\label{fig:if-trans-code-after}
+    \includegraphics[width=\linewidth]{../Figures/if-trans-before}
+    \caption{If transformation source graph}
+    \label{fig:if-trans-before}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[width=\linewidth]{../Figures/if-trans-merged}
+    \caption{If transformation after transformation}
+    \label{fig:if-trans-merged}
 \end{figure}
 
 \subsection{Fetch imbalance}
@@ -118,30 +112,3 @@ The observant reader will have noticed this only solves the problems for empty r
 This will be subject of future improvements where we aim to increase efficiency by separately batching subgraphs of the program and this, we hope, should lead to an optimal result in that case as well.
 
 Now we can apply the transformation as we did before.
-
-\section{Transformation in operators}
-
-More concretely \texttt{if} is composed of a starting node called \opite{} and an end node called \opselect{}, see Figure \ref{fig:basic-if}.
-The \opite{} operator takes as its input the boolean value and depending on the value activates one of its two outputs.
-Outputs from the \opite{} operator are connected via an activation arc to the first operator(s) of each of the respective conditional branches.
-The computed output from the conditional branches are both fed to the \opselect{} operator which returns a value whenever one of its inputs receives one.
-
-\begin{figure}
-	\includegraphics[width=\textwidth]{Figures/basic-if}
-	\caption{Dataflow representation of if}
-	\label{fig:basic-if}
-\end{figure}
-
-To close out our fetch from the if we replace the original two fetches with a select operator, receiving both their inputs and feeding into a single fetch.
-The output from this fetch is fed back to \textbf{both} continuation branches.
-Any location that used either fetch result now receives the result of the combined fetch.
-This might seem wrong, however we use a new \opite{} to only select one of the two branches for execution, therefore only the originally selected branch also continues with its execution.
-
-\begin{figure}
-	\includegraphics[width=\textwidth]{Figures/basic-if-rewrite-original}
-	\caption{If rewrite source graph}
-	\label{fig:if-rewrite-graph-before}
-	\includegraphics[width=\textwidth]{Figures/basic-if-rewrite}
-	\caption{If rewrite transformed graph}
-	\label{fig:if-rewrite-graph-after}
-\end{figure}

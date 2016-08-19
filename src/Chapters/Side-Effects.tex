@@ -5,10 +5,6 @@
 % TODO
 % Figure 8.1 is never referenced or explained in the text.
 % “These are typical semantics as would be expected of a program written in a non-sequential language like Haskell.” -> true, which breaks modularity and it breaks the batching of Haxl across functions as argued in our paper.
-% “similar situation to above” -> “similar situation as above”
-% “there is not” -> “there is no”
-% “This all sounds counter intuitive and it is.” -> this sounds negative. Ohua tries to do something new and thereby diverges from existing conventions. I think, this is required in order to address these multi-core issues.
-% “However, we don’t …” This contradicts what you just said two sentences before when you argued that Ohua’s program semantics are counter intuitive and therefore a source of errors. -> The point is that seq would create the program semantics of a “normal” program and therewith break its efficiency by reducing opportunities to execute functions in parallel. (See the experiment in 11.1)
 % 8.4: would benefit from describing the algorithm either in pseudo-code or Clojure code. section seems incomplete because you do not explain the final rewrite.
 
 In the application domain of \yauhau{}, which is a program that accesses a remote resource, like a database or some repository over the network, side effects are actions which modify the remote resource.
@@ -41,7 +37,8 @@ public interface Dropable<A> {
 }
 
 public interface Cache {
-    BiFunction<Dropable<Request>, Request, Dropable<Request>> getRemoveAction();
+    BiFunction<Dropable<Request>, Request, Dropable<Request>>
+    getRemoveAction();
     Object get(Request r);
     Object set(Request r, Object resp);
     void handleStore(Request r);
@@ -98,13 +95,17 @@ However one problem still remains.
 
 \section{Enforcing order inter algorithm}
 
-What if we have a similar situation to above, but the read and write requests are in two algorithms?
+What if we have a similar situation as above, but the read and write requests are in two algorithms?
 An example of this may be seen in Figure~\ref{fig:reads-and-writes-in-algos}.
 Here we have basically the same situation as above, but this time the programmer tried to introduce the data dependency by making one algorithm depend on the result of the other.
 By normal semantics this should work, however in Ohua all algorithms are directly spliced into the main program except two boundary operators called \texttt{algo-in} and \texttt{algo-out}.
 The boundary operators however only track in and output to the alorithm.
 An independent fetch like the one we have here in \texttt{does-read} has no data dependency to the algorithm boundary.
-As the result of our write request is only connected to the algorithm boundary via a parameter there is not data dependency between the read and the write request after splicing.
+As the result of our write request is only connected to the algorithm boundary via a parameter there is no data dependency between the read and the write request after splicing.
+If as a result the order of the read and write request was nondeterministic it would be very counter intuitive to the programmer.
+He would expect regular program semantics to hold in this case, which they do not do.
+There is of course still the \texttt{seq} operator, which we could use to enforce ordering and those semantics actually hold, even across algorithms, but require additional work from the programmer.
+Therefore we would like to automate the addition of \texttt{seq} operators in the program where there are independent reads or writes that may cause unexpected indeterminism.
 
 \begin{figure}
 \begin{minted}{Clojure}
@@ -121,12 +122,6 @@ As the result of our write request is only connected to the algorithm boundary v
 \caption{Reads and writes in algorithms}
 \label{fig:reads-and-writes-in-algos}
 \end{figure}
-
-This all sounds counter intuitive, and it is.
-We would expect regular program semantics to hold in this case, which they do not do.
-There is of course still the \texttt{seq} operator, which we could use to enforce ordering and those semantics actually hold, even across algorithms.
-However we don't want to introduce this extra hurdle or even potential source of very frustrating errors as we break a common and sensible assumption a programmer might make.
-Therefore we would like to automate the addition of \texttt{seq} operators in the program where there are independent reads or writes that may cause unexpected indeterminism.
 
 \section{Rewrite}
 

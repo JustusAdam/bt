@@ -57,7 +57,8 @@ main = do
 
 \section{Pattern based generation}
 
-\begin{itemize}
-  \item We would like to generate different code for different experiments, adhering to particular patterns
-  \item Future work, but should be quickly described here.
-\end{itemize}
+In the process of generating the code for these experiments, especially if, it became apparent that it is very desirable to create random code with specific characteristics and patterns.
+In the particular case of the if experiment it would be desirable to create nodes where branches are either precomputed or on the branch.
+Currently this needs to be hardcoded in the generator and switched via a command line parameter.
+For future work there should be a way to define ad hoc patterns for how a node, or perhaps even whole subgraphs matching certain requirements should be serialised.
+Combine this flexibility with a probability for the pattern to be applied and most of what is now a hard coded transformation of graph nodes could be defined with those rules.

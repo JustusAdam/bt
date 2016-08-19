@@ -7,7 +7,7 @@
 
 \subsection{Haxl}
 
-Haxl\cite{Haxl:library:link} is a Haskell library which provides a framework for performing data access operations with automatic batching and concurrency. It was first introduced in the paper ``There is No Fork: An Abstraction for Efficient, Concurrent, and Concise Data Access''\cite{Marlow:2014:NFA:2692915.2628144} by Simon Marlow, Louis Brandy, Jonathan Coens and Jon Purdy.
+Haxl\cite{Haxl:library:link}\cite{Marlow:2014:NFA:2692915.2628144} is a Haskell library which provides a framework for performing data access operations with automatic batching and concurrency. It was first introduced in the paper ``There is No Fork: An Abstraction for Efficient, Concurrent, and Concise Data Access''\cite{Marlow:2014:NFA:2692915.2628144} by Simon Marlow, Louis Brandy, Jonathan Coens and Jon Purdy.
 They describe a system whereby using the Haskell abstraction of an Applicative Functor\cite{mcbride2008applicative} they find which data access operations are independent from one another and therefore may be fetched as a batch job.
 As a very small example in Figure~\ref{fig:operation-in-haxl} we see a function \texttt{commonFriends}.
 The \texttt{intersection} function depends for its input on both the result of fetching the friends of \texttt{a} as well as the friends of \texttt{b}.
@@ -36,25 +36,34 @@ A runtime traverses the that AST, finds parallel rounds of fetches and executes 
 Datasources can be arbitrary user defined targets for IO actions such as databases, network requests or filesystem IO.
 However datasources must be defined separately and only for those defined datasources the optimisation can be leveraged.
 
-Defining a datasource in Haxl means defining a set of actions on the source in form of a GADT.
+Defining a datasource in Haxl means defining a set of actions on the source in form of a GADT, see Figure~\ref{fig:defining-requests-in-haxl} .
 
+\begin{figure}
 \begin{minted}{Haskell}
 data FacebookRequest a where
     GetFriends :: UserID -> FacebookRequest [UserID]
     GetProfile :: UserID -> FacebookRequest Profile
 \end{minted}
+\caption{Defining requests in Haskell}
+\label{fig:defining-requests-in-haxl}
+\end{figure}
+
 
 Every time you want to make a request in the program it has to be encoded into one of those actions when passed to the IO action executing function \texttt{dataFetch}.
 
 Additionally, for the cache, the \texttt{Hashable} typeclass needs to be implemented on this type as well as the \texttt{DataSourceName} and \texttt{StateKey} typeclass to identify the source.
 
-The actual execution of the IO action is defined in a typeclass called \texttt{DataSource} which also has to be defined on the request type.
+The actual execution of the IO action is defined in a typeclass called \texttt{DataSource} which also has to be defined on the request type, see Figure~\ref{fig:defining-datsource-in-haxl}.
 The \texttt{DataSource} typeclass has a method called \texttt{fetch} which does the actual work of performing the desired IO action.
 
+\begin{figure}
 \begin{minted}{Haskell}
 class DataSource u request where
     fetch :: ... -> [BlockedFetch request] -> PerformFetch
 \end{minted}
+\caption{Defining a data source in Haxl}
+\label{fig:defining-datsource-in-haxl}
+\end{figure}
 
 As its type signature indicates the \texttt{fetch} method performs the IO action on multiple requests simultaneously and this is where the batching happens.
 
@@ -73,7 +82,10 @@ For instance in conditionals or when executing a fetch over a collection, see Fi
 \begin{figure}
 \begin{minted}{Haskell}
 mappedFetches = mapM fetch [...]
-conditionalFetches execute = if execute then fetch 0 else return ()
+conditionalFetches execute =
+    if execute
+        then fetch 0
+        else return ()
 \end{minted}
 \caption{Control flow in Haxl}
 \label{fig:control-flow-in-haxl}

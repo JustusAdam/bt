@@ -34,11 +34,15 @@ In order to determine whether a certain node has such properties we need to look
 
 Context is the general name we give these not structurally emergent properties of a subgraph.
 The context type is a label which refers to the behaviour of that particular context, i.e. \texttt{if} or \texttt{smap}.
-An instance of a context is a concrete node in the dataflow graphs
+An instance of a context is a concrete node in the dataflow graphs.
 
 \subsection{The stack}
 
-A context stack is a ordered list of nested contexts a node is contained in.
+A context stack $S(n)$ is a ordered list of nested contexts a node is contained in.
+Following I will sometimes speak of a context and sometimes of a context stack.
+Both are equivalent, since every context can be uniquely associated with a context stack and vice versa.
+The context associated with a stack $s$ is the topmost context of $s$.
+The stack associated with a context $c$ is the context stack of its exit node.
 
 \subsubsection{Notation}
 
@@ -51,7 +55,30 @@ A context stack is a ordered list of nested contexts a node is contained in.
 
 \subsubsection{Definitions}
 
-If there are two context stacks $s_1$ and $s_2$ and the successive removal of elements from the top of $s_1$ yields $s_2$, $s_1 \rightarrow_{pop} s_2$, then we say $s_1$ is \textit{nested} in $s_2$ or a \emph{child context} of $s_2$ and $s_2$ is a \textit{subcontext} or \emph{parent context} of $s_1$.
+If there are two context stacks $s_1$ and $s_2$ and the successive removal of elements from the top of $s_1$ yields $s_2$, then we say $s_1$ is \textit{nested} in $s_2$ or a \emph{child context} of $s_2$ and $s_2$ is a \textit{subcontext} or \emph{parent context} of $s_1$.
+
+\[
+  s_1 \rightarrow_{pop}^n s_2 \mid n > 0
+\]
+
+A root context $r$ is the context of the empty context stack $r = []$.
+The amount of elements $D(s)$ which need to be removed from a stack $s$ to reach the root context is its \emph{nesting depth}, which equates to the height of the stack.
+
+\[
+  D(s) := s \rightarrow_{pop}^d r
+\]
+
+Truncating $T(s)$ a stack $s$ to $n$ means to remove elements from the top until a nesting depth of $n$ is reached.
+If the nesting of the original stack was already lower than $n$ the truncated stack is the original stack itself.
+
+\[
+  T(s, n) :=
+  \begin{cases}
+    s' \mid s \rightarrow_{pop}^* s', D(s') = n & D(s) > n \\
+    s & D(s) \leq n \\
+  \end{cases}
+\]
+
 Context effects aggregate in a context stack.
 
 
@@ -62,7 +89,16 @@ There are a few general properties which can be asserted about contexts in the O
 \begin{itemize}
   \item \textbf{Contexts are naturally fully enclosing.}
         This means that in a normal program two contexts never partially overlap.
-        They are either disjoint or one is fully contained in the other.
+        Truncating both to the length of the smaller stack either yields the same stack for both or one were no element occurs in both stacks.
+        Formally
+        \[
+        \forall s_1, s_2 | n = \min(D(s_1), D(s_2)) :=
+          \begin{cases}
+            T(s_1, n) = T(s_2, n) \\
+            e_{s_1} \neq e_{s_2} \mid e_{s_1} \in T(s_1, n), e_{s_2} \in T(s_2, n) \\
+          \end{cases}
+        \]
+
   \item \textbf{Contexts are an inherited property.}
         Nodes which are not special, context changing nodes such as \texttt{smap} or \texttt{ifThenElse} inherit their context from their preceding nodes.
         Briefly said a node N is in every context any of its preceding nodes is in.
@@ -98,7 +134,14 @@ The node would then be labeled with the transformed context stack.
 
 After the detection moved into the Ohua project the site of context detection was moved as well.
 Additionally new types of context are now recognised, such as \texttt{algo} and \texttt{seq}.
-Context detection in Ohua is now done right when the Clojure code is being transformed into the IR.
+Context detection in Ohua is now done right when the Clojure code is being transformed into the IR, see Figure~\ref{fig:ohua-compiler-flow-with-ctx}.
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{ohua-compiler-flow-with-ctx}
+  \caption{Context information in the Ohua compiler flow}
+  \label{fig:ohua-compiler-flow-with-ctx}
+\end{figure}
+
 At this point the subgraphs enclosed by the context are even more easily visible.
 When we traverse the AST and we encounter a context introducing function like smap, we mark the enclosed function such that when it is being traversed all nodes inside are annotated with a reference to the smap starting node.
 This overwrites any previous marker.

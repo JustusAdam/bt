@@ -69,7 +69,8 @@ A graphical example of this can be seen in Figure \ref{ch:smap-transformation}.
 The structure of the nested smap is saved in a tree structure.
 We use an unlabeled rose tree\cite{MALCOLM1990255}.
 It is important to use a tree structure because we would like to be able to support arbitrarily deep levels of nesting.
-The Java programmer will recognise the Composite Pattern in the definition of our tree, which comprises of an abstract tree base class, Figure \ref{fig:tree-impl-base-class}.
+A rose tree can easily be flattened into a list and be reconstructed into a tree.
+The Java programmer will recognise the Composite Pattern\cite{gamma1995design} in the definition of our tree, which comprises of an abstract tree base class, Figure \ref{fig:tree-impl-base-class}.
 
 \begin{figure}
 
@@ -123,6 +124,8 @@ public final class RequestTreeBranch
 \label{fig:tree-impl-branch}
 
 \end{figure}
+
+
 \begin{figure}
 
 \begin{minted}{Java}
