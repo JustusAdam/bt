@@ -7,6 +7,30 @@
 
 \subsection{Haxl}
 
+Haxl\cite{Haxl:library:link} is a Haskell library which provides a framework for performing data access operations with automatic batching and concurrency. It was first introduced in the paper ``There is No Fork: An Abstraction for Efficient, Concurrent, and Concise Data Access''\cite{Marlow:2014:NFA:2692915.2628144} by Simon Marlow, Louis Brandy, Jonathan Coens and Jon Purdy.
+They describe a system whereby using the Haskell abstraction of an Applicative Functor\cite{mcbride2008applicative} they find which data access operations are independent from one another and therefore may be fetched as a batch job.
+As a very small example in Figure~\ref{fig:operation-in-haxl} we see a function \texttt{commonFriends}.
+The \texttt{intersection} function depends for its input on both the result of fetching the friends of \texttt{a} as well as the friends of \texttt{b}.
+However the two data fetches \texttt{friendsOf a} and \texttt{friendsOf b} are independent from one another, neither depends on the result of the other, which is what the \texttt{<*>} operator symbolises.
+
+\begin{figure}
+\begin{minted}{Haskell}
+commonFriends a b =
+    pure intersection
+        <*> friendsOf a
+        <*> friendsOf b
+\end{minted}
+\caption{An operation in Haxl}
+\label{fig:operation-in-haxl}
+\end{figure}
+
+\subsection{Muse}
+
+Muse\cite{Muse:repository:link} is a Clojure implementation of Haxl.
+Like Haxl the data access actions are defined with functors.
+This functor is a free monad which builds an AST of the program.
+A runtime traverses the that AST, finds parallel rounds of fetches and executes the code, batching I operations.
+
 \subsection{Datasources}
 
 Datasources can be arbitrary user defined targets for IO actions such as databases, network requests or filesystem IO.
@@ -34,17 +58,56 @@ class DataSource u request where
 
 As its type signature indicates the \texttt{fetch} method performs the IO action on multiple requests simultaneously and this is where the batching happens.
 
-When the framework executes the actions each datasources gets all the requests for that particular datasource. Therefore all actions which can be batched together should be defined on the same datasource (in the same GADT) and actions which cant be batched should be defined on separate datasources.
+When the framework executes the actions each datasources gets all the requests for that particular datasource. Therefore all actions which can be batched together should be defined on the same datasource (in the same GADT) and actions which cannot be batched should be defined on separate datasources.
 
+\section{Control flow}
 
-\section{Map}
+Both Haxl and Muse use runtime data structures to aggregate fetch rounds.
+In Haxl this is a \texttt{Data.Sequence.Seq}, which is a type of list.
+At runtime, if a data fetch is encountered it simply gets appended to this list of fetches to execute.
+Thus Haxl builds a dynamic list of fetches to execute for each round each time the program is run.
 
-% Dynamic data structure -> no issues
+This makes it easily to handle cases where the amount of fetches is not known at compile time.
+For instance in conditionals or when executing a fetch over a collection, see Figure~\ref{fig:control-flow-in-haxl}.
 
-\section{If}
-
-% Dynamic data structure -> no issues
+\begin{figure}
+\begin{minted}{Haskell}
+mappedFetches = mapM fetch [...]
+conditionalFetches execute = if execute then fetch 0 else return ()
+\end{minted}
+\caption{Control flow in Haxl}
+\label{fig:control-flow-in-haxl}
+\end{figure}
 
 \section{Side effects}
 
-% No side effects in Haxl and Muse / uncontrolled
+\subsection{Haxl}
+
+Both Haxl and Muse make very strict assumptions about the immutability of their data sources.
+In the case of Haxl side effects of any kind are prohibited.
+A Haxl computation cannot access the Network or Hard drive, only pure actions, or Haxl data fetches are allowed.
+This is enforced via the type system.
+Furthermore Haxl strongly recommends that data fetches not perform mutative operations on the data source.
+This is mainly because additionally to batching requests requests are also cached and when executed again are simply served from the cache.
+A sequence of actions like Figure~\ref{fig:haxl-invalid-actions} would yield \texttt{False} in every case, since the second fetch of \texttt{a} would be served from the cache.
+
+\begin{figure}
+\begin{minted}{Haskell}
+invalid :: GenHaxl u Bool
+invalid = do
+    let a = ...
+    data1 <- fetch a
+    mutate a
+    data2 <- fetch a
+    return (data1 /= data2)
+\end{minted}
+\caption{Haxl invalid actions}
+\label{fig:haxl-invalid-actions}
+\end{figure}
+
+\subsection{Muse}
+
+Muse is more loose with its allowance of side effects, because in Clojure and there is no type system which could be used to restrict IO.
+However it also caches previous requests and therefore the effects of mutating the data source are not reflected in future, cached fetches.
+
+As a result muse also strongly recommends not to mutate the data source.
