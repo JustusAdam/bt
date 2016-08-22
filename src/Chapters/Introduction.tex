@@ -6,10 +6,14 @@
 
 % TODO the intro is a bit twisted: normally an intro goes by this structure: problem, missing solutions, contributions, outline (I like it when the last two are co-mingled.)
 
-This thesis concerns itself with the extension and improvement of \yauhau{}, an IO optimisation compiler plugin for the Ohua framework.
-\yauhau{} was first introduced in the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016}.
-In the paper, which was written by Sebastian Ertel, Andrés Goens, Jeronimo Castrillon and myself, we explained how \yauhau{} rewrites a program to achieve efficient IO whilst allowing the programmer to write very concise and straight forward code.
-We also alluded to some of the issues that arise from control flow when performing the \yauhau{} transformation and we briefly outlined the solutions that we developed.
+In the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016}, authored by Sebastian Ertel, Andrés Goens, Jeronimo Castrillon and myself, \yauhau{}, a plugin for the Ohua\cite{Ertel:2015:OID:2807426.2807431}\cite{Ohua:library:link} compiler, was introduced, which rewrites a program to achieve efficient IO whilst allowing the programmer to write very concise and straight forward code.
+We explained the basic idea of finding data independent reading IO actions and combining them into batched requests, caching requests as well as executing them concurrently.
+Because of your compile time transformation model however \yauhau{} faces challenges when confronted with control flow structures such as \texttt{if} and iteration.
+Much headway in solving these challenges was made in the paper, but a generalisation of handling control flow is needed.
+Also introduced in the paper is the notion of a mutative IO action in the form of \texttt{read} requests.
+We already explained how we ensure results of mutative actions are visible to the read requests despite the existence of a cache, however there is still more semantic consistency to be desired with read requests.
+Namely that when algorithm $a$ depends on the result of running algorithm $b$, all writes and reads in $b$ should be performed before reads or writes in $a$ are performed.
+There is currently no guarantee that this would happen because of the dataflow semantics of the underlying system Ohua.
 
 In this thesis I want to explain in much more detail the concrete ways in which I handle control flow in \yauhau{} and explain implementation considerations and decisions made during and after writing of the paper but which we unfortunately did not have space for in the paper itself.
 Chapter~\ref{ch:smap-transformation} concerns itself with \texttt{smap} and Chapter~\ref{ch:if-transformation} explains in more detail the handling of \texttt{if}.

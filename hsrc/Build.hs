@@ -128,6 +128,51 @@ plots =
     , "if-experiment.eps"
     , "if-experiment-delayed.eps"
     ]
+figures =
+    [ "basic-if-rewrite-original.pdf"
+    , "basic-if-rewrite.pdf"
+    , "basic-if.pdf"
+    , "haxl-basic-example.pdf"
+    , "if-hypothesised.pdf"
+    , "if-in-operators.pdf"
+    , "if-in-reality.pdf"
+    , "if-insert-empty-better-after-insert.pdf"
+    , "if-insert-empty-parallel-after-insert.pdf"
+    , "if-insert-empty-parallel-before.pdf"
+    , "if-trans-before.pdf"
+    , "if-trans-merged.pdf"
+    , "naive-transformation.pdf"
+    , "ohua-compiler-flow-with-ctx.pdf"
+    , "ohua-compiler-flow.pdf"
+    , "requests-on-branches-graph.pdf"
+    , "requests-precomputed-graph.pdf"
+    , "smap-rewrite-original.pdf"
+    , "smap-rewrite.pdf"
+    , "smap-rounds-eps-converted-to.pdf"
+    , "yauhau-rewrite-flow.pdf"
+    , "yauhau-round-detection.pdf"
+    , "yauhau-transformation.pdf"
+    , "context-nesting-example-exploded.pdf"
+    , "identity-example.pdf"
+    , "redundant-identity-example.pdf"
+    , "redundant-identity-example-rewritten.pdf"
+    ]
+chapters =
+    [ "Context.tex"
+    , "Experiments.tex"
+    , "Extending-Code-Generator.tex"
+    , "If-Transformation.tex"
+    , "Introduction.tex"
+    , "Ohua.tex"
+    , "Related-Work.tex"
+    , "Side-Effects.tex"
+    , "Smap-Transformation.tex"
+    , "Transformation-Implementation-Guidelines.tex"
+    , "Yauhau.tex"
+    ]
+appendices =
+    [ "AppendixA.tex" ]
+bibliography = [ "main.bib" ]
 
 
 copyFromSrc :: FilePath -> Action ()
@@ -140,10 +185,6 @@ getTexFilesFrom dir = filter ((==) ".tex" . takeExtension) <$> getDirectoryConte
 
 buildPFD :: FilePath -> Action ()
 buildPFD out = do
-    chapters <- getTexFilesFrom $ sourceDir </> chapterDir
-    appendices <- getTexFilesFrom $ sourceDir </> appendixDir
-    figures <- filter ((/=) ".graffle" . takeExtension) <$> getDirectoryContents (sourceDir </> figuresDir)
-    bibliography <- filter ((==) ".bib" .takeExtension) <$> getDirectoryContents sourceDir
     need $
         src
         : map (\chapter -> buildDir </> chapterDir </> chapter) chapters

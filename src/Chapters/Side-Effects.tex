@@ -59,32 +59,47 @@ This problem can be avoided by using an operator called \texttt{seq}.
 In the example Figure~\ref{fig:enforcing-order-with-seq} we enforce the write to happen first using seq.
 
 \begin{figure}
-\begin{minted}{Clojure}
-(defalgo reqs [req]
+\begingroup
+\definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
+\catcode`\@=\active
+\def@#1@{\textcolor{green(html/cssgreen)}{#1}}
+\begin{minted}[escapeinside=||]{Clojure}
+(|@defalgo@| reqs [req]
   (let [_ (write req)
         r (read req)]
     r))
 \end{minted}
+\endgroup
 \caption{Example for if independent actions}
 \label{fig:independent-actions-code}
 \end{figure}
 
 \begin{figure}
-\begin{minted}{Clojure}
-(defalgo reqs [req]
+\begingroup
+\definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
+\catcode`\@=\active
+\def@#1@{\textcolor{green(html/cssgreen)}{#1}}
+\begin{minted}[escapeinside=||]{Clojure}
+(|@defalgo@| reqs [req]
   (let [w (write req)
         r (seq w (read req))]
     r))
 \end{minted}
+\endgroup
 \caption{Enforcing order using seq}
 \label{fig:enforcing-order-with-seq}
 \end{figure}
 
 \begin{figure}
-\begin{minted}{Clojure}
-(defalgo req [req]
+\begingroup
+\definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
+\catcode`\@=\active
+\def@#1@{\textcolor{green(html/cssgreen)}{#1}}
+\begin{minted}[escapeinside=||]{Clojure}
+(|@defalgo@| req [req]
   (read (write req)))
 \end{minted}
+\endgroup
 \caption{Enforcing order with data dependencies}
 \label{fig:enforcing-order-with-dd}
 \end{figure}
@@ -108,17 +123,22 @@ There is of course still the \texttt{seq} operator, which we could use to enforc
 Therefore we would like to automate the addition of \texttt{seq} operators in the program where there are independent reads or writes that may cause unexpected indeterminism.
 
 \begin{figure}
-\begin{minted}{Clojure}
-(defalgo does-read [req some-data]
+\begingroup
+\definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
+\catcode`\@=\active
+\def@#1@{\textcolor{green(html/cssgreen)}{#1}}
+\begin{minted}[escapeinside=||]{Clojure}
+(|@defalgo@| does-read [req some-data]
   (let [res (read some-constant)]
     (computation res req some-data)))
 
-(defalgo does-write [req]
+(|@defalgo@| does-write [req]
   (write req))
 
-(defalgo reqs [req]
+(|@defalgo@| reqs [req]
   (does-read req (does-write req)))
 \end{minted}
+\endgroup
 \caption{Reads and writes in algorithms}
 \label{fig:reads-and-writes-in-algos}
 \end{figure}

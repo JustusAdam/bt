@@ -38,13 +38,18 @@ This restriction is necessary since neither Haskell nor Ohua, our two main targe
 See produced code in Figure~\ref{fig:generated-map-code}.
 
 \begin{figure}
-\begin{minted}{Clojure}
-(defalgo ifnlocal3 [param1]
+\begingroup
+\definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
+\catcode`\@=\active
+\def@#1@{\textcolor{green(html/cssgreen)}{#1}}
+\begin{minted}[escapeinside=||]{Clojure}
+(|@defalgo@| ifnlocal3 [param1]
     ...)
 (defn main []
   (ohua
     (length (smap ifnlocal3 (vector local4 local5 local6)))))
 \end{minted}
+\endgroup
 \begin{minted}{Haskell}
 ifnlocal3 param1 = ...
 main = do

@@ -5,20 +5,31 @@
 
 Structures such as smap and if, which alter control flow and thus have implications on the working of the \yauhau{} base transformation do not just occur independently in code.
 As was mentioned in Chapter \ref{ch:smap-transformation} these structures can be nested.
-However even though the smap transformation correctly handles smaps nested in smaps to arbitrary depth we may also have interleaved nesting of smap and if, see Figure~\ref{fig:nested-context-example}.
+However even though the smap transformation correctly handles smaps nested in smaps to arbitrary depth we may also have interleaved nesting of smap and if, see Figure~\ref{fig:nested-context-example} and \ref{fig:visual-context-nesting-example-exploded}.
 
 \begin{figure}
-\begin{minted}{Clojure}
-(defalgo algo1 [param]
+\begingroup
+\definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
+\catcode`\@=\active
+\def@#1@{\textcolor{green(html/cssgreen)}{#1}}
+\begin{minted}[escapeinside=||]{Clojure}
+(|@defalgo@| algo1 [param]
   (smap
-    (algo [val]
-      (if some-condition
-        (smap (algo [item] (compute-something (fetch item)))
+    (|@algo@| [val]
+      (if (is-iterable? val)
+        (smap (|@algo@| [item] (compute-something (fetch item)))
           val)
         (some-operation val))))
 \end{minted}
+\endgroup
 \caption{Nested context example}
 \label{fig:nested-context-example}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[width=\linewidth]{../Figures/context-nesting-example-exploded}
+    \caption{Visual example of context nesting with exploded stack}
+    \label{fig:visual-context-nesting-example-exploded}
 \end{figure}
 
 \section{Definition}
@@ -31,10 +42,13 @@ The information in a dataflow graphs is limited to data dependencies and derivab
 However real programs have many properties which do not emerge structurally in a dataflow graph.
 Control flow structures such as smap and if for instance change the properties of the contained subgraph but this is not structurally visible in the graph.
 In order to determine whether a certain node has such properties we need to look and interpret the actual labels of the nodes.
+In the example in Figure~\ref{fig:visual-context-nesting-example-exploded} these properties are marked with dotted circles, because they are not inherently visible from the structure of the graph itself.
 
 Context is the general name we give these not structurally emergent properties of a subgraph.
 The context type is a label which refers to the behaviour of that particular context, i.e. \texttt{if} or \texttt{smap}.
-An instance of a context is a concrete node in the dataflow graphs.
+An instance of a context is a concrete subgraph of the dataflow graph, as seen in Figure~\ref{fig:visual-context-nesting-example-exploded}.
+In this figure you can also see the typical enter and exit nodes of a context, which are located at the context boundary.
+The type of enter and exit nodes determines the behaviour of the context itself.
 
 \subsection{The stack}
 
@@ -43,6 +57,7 @@ Following I will sometimes speak of a context and sometimes of a context stack.
 Both are equivalent, since every context can be uniquely associated with a context stack and vice versa.
 The context associated with a stack $s$ is the topmost context of $s$.
 The stack associated with a context $c$ is the context stack of its exit node.
+See also Figure~\ref{fig:visual-context-nesting-example-exploded}.
 
 \subsubsection{Notation}
 
@@ -98,15 +113,16 @@ There are a few general properties which can be asserted about contexts in the O
             e_{s_1} \neq e_{s_2} \mid e_{s_1} \in T(s_1, n), e_{s_2} \in T(s_2, n) \\
           \end{cases}
         \]
+        An example of this property can be seen in Figure~\ref{fig:visual-context-nesting-example-exploded}.
+        Every context is completely embedded within any of its parent contexts.
 
   \item \textbf{Contexts are an inherited property.}
         Nodes which are not special, context changing nodes such as \texttt{smap} or \texttt{ifThenElse} inherit their context from their preceding nodes.
         Briefly said a node N is in every context any of its preceding nodes is in.
-        Since, as mentioned above, contexts do not partially overlap, contexts of preceding nodes are always rooted subcontexts of one another.
+        Since, as mentioned above, contexts do not partially overlap, contexts of preceding nodes are always subcontexts of one another.
 \end{itemize}
 
 We can also see that contexts are special in Ohua since they are not available to the user and what I mean by that is all known contexts use special dataflow operators for their implementation, because stateful functions are not powerful enough.
-
 
 \section{Detection}
 
@@ -159,7 +175,7 @@ Subsequently we would like to `undo' each layer of context around each fetch to 
 This `undoing' operation should be reasonably efficient and yet easy to understand.
 
 My context unwinding algorithm, which combines the if and smap transformations to deal with arbitrary nesting, uses the properties of contexts as mentioned above.
-It unwinds one context at a time, starting with the deepest nesting level.
+It unwinds one context at a time, dispatching to the appropriate handler, see Figure~\ref{fig:yauhau-rewrite-flow}, starting with the deepest nesting level.
 The reason this results in a correct unwinding is that if a particular context has been unwound around a particular fetch, this fetch now lies in what was formerly the parent context.
 Since this parent context cannot have been as deeply nested as the now unwound child context, it itself has not been unwound yet since we go from high nesting to low nesting.
 At the same time since all contexts are eventually unwound the parent context has already been scheduled for unwinding.

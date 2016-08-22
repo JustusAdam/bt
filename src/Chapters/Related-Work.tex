@@ -1,4 +1,4 @@
-%!TEX root = ../thesis.tex
+% !TEX root = ../thesis.tex
 \chapter{Related Work}
 
 \label{ch:related-work}
@@ -22,6 +22,24 @@ commonFriends a b =
 \end{minted}
 \caption{An operation in Haxl}
 \label{fig:operation-in-haxl}
+\end{figure}
+
+A program written with Haxl runs all independent program graphs blocking once it encounters a fetching operation.
+Once all program paths are either finished or blocking all the blocking requests are executed in what is called a `round'.
+Once the results come back the paths are resumed.
+A very simple example can be seen in Figure~\ref{fig:haxl-basic-example}. 
+
+\begin{figure}
+\begin{minted}{Haskell}
+main =
+    pure compute
+        <*> fetch (increment 23)
+        <*> fetch (42 + 1337)
+        <*> fetch (log_e 2.71828 + 1337)
+\end{minted}
+    \includegraphics[width=\linewidth]{../Figures/haxl-basic-example}
+    \caption{A visual example of the haxl execution}
+    \label{fig:haxl-basic-example}
 \end{figure}
 
 \subsection{Muse}

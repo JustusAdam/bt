@@ -176,20 +176,27 @@ This is analogous to the \texttt{map} function in Haskell or Clojure, with the d
 For a usage reference see Figure
 
 \begin{figure}
-\begin{minted}{Clojure}
+\begingroup
+\definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
+\catcode`\@=\active
+\def@#1@{\textcolor{green(html/cssgreen)}{#1}}
+\begin{minted}[escapeinside=||]{Clojure}
 (ohua
   (let [free-var (add 4 5)
         list [1 2 3 4]]
     (smap
-      (algo [item]
+      (|@algo@| [item]
         (add item free-var))
       list)))
 \end{minted}
+\endgroup
+\caption{Free variables in smap}
+\label{fig:free-variables-in-smap}
 \end{figure}
 
 Normally variable bindings are simply translated into a set of arcs from where the value in the binding was originally created to each site where the variable is used.
 When the source emits a value it is sent down each arc once.
-This poses a problem in the case of smap where the target of the arc is a free variable inside the smap and other inputs may receive many packets due to the mapping, whereas this input would naively only receive one.
+This poses a problem in the case of smap where the target of the arc is a free variable inside the smap, like in Figure~\ref{fig:free-variables-in-smap}, and other inputs may receive many packets due to the mapping, whereas this input would naively only receive one.
 What Ohua does to solve this is replicate sending the packet once for each element in the mapped collection.
 
 In Yauhau we run into a similar problem.

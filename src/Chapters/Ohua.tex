@@ -58,12 +58,17 @@ In Ohua however, since there are no data dependencies between \texttt{read} and 
 When the algorithm is executed using the \texttt{ohua} or \texttt{<-ohua} macro the algorithms Clojure code is compiled into a dataflow graph and executed by the Ohua runtime.
 
 \begin{figure}
-\begin{minted}{Clojure}
-(defalgo my-algo []
+\begingroup
+\definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
+\catcode`\@=\active
+\def@#1@{\textcolor{green(html/cssgreen)}{#1}}
+\begin{minted}[escapeinside=||]{Clojure}
+(|@defalgo@| my-algo []
   (let [a (read-database)
         b (write-database)]
     (compute a b)))
 \end{minted}
+\endgroup
 \caption{An example of indeterministic code}
 \label{fig:indeterministic-code}
 \end{figure}
