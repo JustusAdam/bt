@@ -3,7 +3,7 @@
 
 \label{ch:Ohua}
 
-Ohua\cite{Ertel:2015:OID:2807426.2807431}\cite{Ohua:library:link} is parallelisation framework implemented in Java and Clojure.
+Ohua\cite{Ertel:2015:OID:2807426.2807431}\cite{Ohua:library:link} is parallelisation framework implemented in Java\cite{JavaLanguage} and Clojure\cite{ClojureLanguage}.
 
 At compile time Ohua transforms the program into a dataflow graph.
 This graph is a representation of individual chunks of code of the program and the data dependencies between them.
@@ -13,11 +13,41 @@ Edges represent data dependencies.
 Edge direction indicates result and argument.
 The result of the source node is argument to the target node.
 The result value of one stateful function may be used by multiple other stateful functions and each stateful function can have multiple inputs or none at all.
+An example of how this transformation looks can be seen in Figure~\ref{fig:ohua-code-example}.
+All of the called functions here, such as \texttt{vector}, \texttt{add} etc. have to be implemented as stateful functions, see Figure~\ref{fig:ohua-sfn-example}.
+
+\begin{figure}[h]
+\begin{minted}{Clojure}
+(def main
+  (ohua
+    (let [a (increment 1)
+          b (add 2 a)
+          c (some-action)]
+      (vector a b c))))
+\end{minted}
+\includegraphics[width=\linewidth]{../Figures/ohua-code-example}
+\caption{An example for code transformation in Ohua}
+\label{fig:ohua-code-example}
+\end{figure}
+
+\begin{figure}[h]
+\begin{minted}{Java}
+public class Add {
+  @defsfn // <- the annotation to make a stateful function
+  public Int add(Int i1, Int i2) {
+    return i1 + i2;
+  }
+}
+\end{minted}
+\caption{Example implementation for \texttt{add}}
+\label{fig:ohua-sfn-example}
+\end{figure}
 
 This dataflow graph can then be executed by a dataflow execution runtime which dynamically schedules the nodes of the graph.
 The runtime knows about the data dependencies between the nodes of the graph and therefore can schedule independent nodes in parallel.
 Data independent nodes can be executed in parallel.
 Also subsequent calls to the same node with unrelated data, as a result of a mapping operation for instance, can be executed in parallel.
+This property allows us to do deterministic state modifications on an object of the class the stateful function is attached to.
 As a result we obtain pipeline parallelism.
 
 
@@ -55,6 +85,7 @@ No two functions should share data in any way other then by explicitly passing t
 Furthermore there should not be any dependency on invocation ordering which is not expressed directly through data dependencies.
 The snippet of code in Figure~\ref{fig:indeterministic-code} for example: If this were normal Clojure code, the read would be executed before the write due to the sequential, deterministic semantics of a Clojure \texttt{let} binding.
 In Ohua however, since there are no data dependencies between \texttt{read} and \texttt{write}, the execution order of those two stateful functions is nondeterministic and they could even be executed simultaneously.
+The graph in Figure~\ref{fig:indeterministic-code} shows very nicely how at this stage there is no visible order for those two actions in the compiled graph.
 When the algorithm is executed using the \texttt{ohua} or \texttt{<-ohua} macro the algorithms Clojure code is compiled into a dataflow graph and executed by the Ohua runtime.
 
 \begin{figure}
@@ -69,6 +100,7 @@ When the algorithm is executed using the \texttt{ohua} or \texttt{<-ohua} macro 
     (compute a b)))
 \end{minted}
 \endgroup
+\includegraphics[width=\linewidth]{../Figures/indeterministic-code-example}
 \caption{An example of indeterministic code}
 \label{fig:indeterministic-code}
 \end{figure}
@@ -104,7 +136,7 @@ The actual implementation of the graph is simply a list of functions, see Figure
 Each function is a Clojure record with fields for a unique id, the name of the function, a vector of input bindings and a binding or a vector of bindings as result values.
 By moving result lists to the left and a putting a Clojure function call to the right this graph can be represented as a Clojure \texttt{let} form, see Figure~\ref{fig:ir-as-clojure}.
 
-\begin{figure}
+\begin{figure}[h]
 \begin{minted}{Clojure}
 (defrecord IRFunc [id name args return])
 

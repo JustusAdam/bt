@@ -46,6 +46,7 @@ Similar to Haxl, all data sources a user wants to access in \yauhau{} must be de
 \yauhau{} has a more loose way of working with data sources than Haxl.
 IO actions in \yauhau{} are objects of the \texttt{Request} class.
 
+\begin{figure}[h]
 \begin{minted}{Java}
 public final class Request<Payload, Return>{
     private final Paylod payload;
@@ -56,16 +57,23 @@ public final class Request<Payload, Return>{
     /* omitted code */
 }
 \end{minted}
+\caption{Implementation of the \texttt{Request} class}
+\label{fig:request-class-implementation}
+\end{figure}
 
-Each \texttt{Request} has two fields, an arbitrary Payload and a data source.
-Here the data source, similarly to Haxl implements a Java interface \texttt{IDataSource} which provides a method for executing batched requests.
+Each \texttt{Request} has two fields, an arbitrary Payload and a data source, compare Figure~\ref{fig:request-class-implementation} .
+Here the data source, similarly to Haxl implements a Java interface \texttt{IDataSource}, see Figure~\ref{fig:idatasource-interface-implementation}, which provides a method for executing batched requests, hence the type \texttt{Iterable<Payload>} for the \texttt{fetch} method on the \texttt{IDataSource} interface (Figure~\ref{fig:idatasource-interface-implementation}   ).
 
+\begin{figure}[h]
 \begin{minted}{Java}
 public interface IDataSource<Payload, Return> {
     Object getIdentifier();
     Iterable<Return> fetch(Iterable<Payload> requests);
 }
 \end{minted}
+\caption{Implementation of the \texttt{IDataSource} interface}
+\label{fig:idatasource-interface-implementation}
+\end{figure}
 
 At runtime requests are grouped by the data source they are paired with and then handed to the respective source as a single list of many requests.
 
@@ -78,7 +86,7 @@ The \fetch{} node itself is a regular stateful function (See Figure~\ref{fig:fet
 Since data sources expect iterables of requests the \texttt{fetch} operator builds one and then returns the first element from the iterable the data source returned.
 If the source works as expected this iterable should hold results of performing the requests in the same order as the requests were originally.
 
-\begin{figure}
+\begin{figure}[h]
 \begin{minted}{Java}
 public final class FetchOp<P, R> {
     @defsfn
@@ -136,10 +144,61 @@ As an example you can see a typical dataflow IR graph in Figure~\ref{fig:yauhau-
 The number after the node name is the unique id for that particular node and used for in the \emph{Visited} and \emph{Round} sets.
 Blue dotted lines mark the stages as we traverse the graph.
 In each stage only nodes for whom all incoming edges are created, symbolised, for up to the first round, by the green arrows, can be part of the stage.
+You can also follow this algorithm along in Figure~\ref{fig:round-detection}.
 After each stage the outgoing nodes are added to the created set as seen on the lefthand side.
 The red \fetch{} nodes block the propagation through the graph and they are added to the \emph{Round} set on the righthand side.
 After stage three we have no more nodes for whom all incoming edges are green, and therefore we dispatch a round of fetches, indicated by the dotted red line.
 When the round has been dispatched, indicated by the solid red line, its created bindings are added to the \emph{Created}, visible after the dispatch on the lefthand side.
+
+\begin{figure}
+\textbf{Remarks:}
+\begin{itemize}
+  \item \texttt{set/union} is the set-union ($\cup$), \texttt{set/difference} is the set-difference ($\setminus$) and \texttt{\#\{\}} is an empty set.
+  \item \texttt{filter} filters the collection where the predicate is true, \texttt{remove} where the predicate is false.
+  \item \texttt{loop} and \texttt{recur} is tail recursion in clojure.
+    \texttt{recur} restarts the body of \texttt{loop} with variables bound to the arguments of \texttt{recur}.
+  \item \texttt{ir} is the ir graph give to the algorithm
+\end{itemize}
+\begin{minted}{Clojure}
+(loop [visited #{}
+       created #{}
+       round #{}
+       rounds []]
+  (let [stage (set/difference
+                (get-callable-fns created ir)
+                visited)
+        new-visited (set/union visited stage)]
+    (if (empty? stage)
+      ; end algorithm
+      (if (empty? round)
+        rounds
+        (conj rounds round))
+      ; continue
+      (let [fetches (filter is-fetch? stage)
+            non-fetches (remove is-fetch? stage)
+            new-round (set/union round fetches)]
+        (if (empty? non-fetches)
+          ; dispatch round
+          (recur new-visited
+                 (set/union
+                   created
+                   (all-return-bindings new-round))
+                 ; next round set to empty again
+                 #{}
+                 ; current round appended to rounds
+                 (conj rounds new-round))
+         ; continue to next stage
+         (recur new-visited
+                ; non-fetch bindings are now created
+                (set/union
+                  created
+                  (all-return-bindings non-fetches))
+                new-round
+                rounds)))))
+\end{minted}
+\caption{Round detection algorithm in Clojure}
+\label{fig:round-detection}
+\end{figure}
 
 Adding the \fetch{} nodes to the set of visited nodes guarantees that rounds do not overlap.
 Not simulating fetch execution before the round finishes guarantees that no round contains two fetches with data dependencies between them, since the dependent fetch would never have been in a stage before the round was finished since the required binding from the first fetch would not be created before the round finishes.
@@ -156,7 +215,7 @@ An accumulator is inserted with the combined inputs of all fetch nodes and the c
 
 \begin{figure}{h}
     \includegraphics[width=\textwidth]{Figures/yauhau-transformation}
-	\caption{Base transformation\cite{ErtelGoensAdamEtAl2016}}
+	\caption{Base transformation (taken from our paper\cite{ErtelGoensAdamEtAl2016})}
 	\label{fig:yauhau-transformation}
 \end{figure}
 

@@ -156,6 +156,8 @@ figures =
     , "identity-example.pdf"
     , "redundant-identity-example.pdf"
     , "redundant-identity-example-rewritten.pdf"
+    , "ohua-code-example.pdf"
+    , "indeterministic-code-example.pdf"
     ]
 chapters =
     [ "Context.tex"

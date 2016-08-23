@@ -7,13 +7,13 @@
 
 \subsection{Haxl}
 
-Haxl\cite{Haxl:library:link}\cite{Marlow:2014:NFA:2692915.2628144} is a Haskell library which provides a framework for performing data access operations with automatic batching and concurrency. It was first introduced in the paper ``There is No Fork: An Abstraction for Efficient, Concurrent, and Concise Data Access''\cite{Marlow:2014:NFA:2692915.2628144} by Simon Marlow, Louis Brandy, Jonathan Coens and Jon Purdy.
+Haxl\cite{Haxl:library:link}\cite{Marlow:2014:NFA:2692915.2628144} is a Haskell\cite{HaskellLanguage} library which provides a framework for performing data access operations with automatic batching and concurrency. It was first introduced in the paper ``There is No Fork: An Abstraction for Efficient, Concurrent, and Concise Data Access''\cite{Marlow:2014:NFA:2692915.2628144} by Simon Marlow, Louis Brandy, Jonathan Coens and Jon Purdy.
 They describe a system whereby using the Haskell abstraction of an Applicative Functor\cite{mcbride2008applicative} they find which data access operations are independent from one another and therefore may be fetched as a batch job.
 As a very small example in Figure~\ref{fig:operation-in-haxl} we see a function \texttt{commonFriends}.
 The \texttt{intersection} function depends for its input on both the result of fetching the friends of \texttt{a} as well as the friends of \texttt{b}.
 However the two data fetches \texttt{friendsOf a} and \texttt{friendsOf b} are independent from one another, neither depends on the result of the other, which is what the \texttt{<*>} operator symbolises.
 
-\begin{figure}
+\begin{figure}[h]
 \begin{minted}{Haskell}
 commonFriends a b =
     pure intersection
@@ -27,7 +27,22 @@ commonFriends a b =
 A program written with Haxl runs all independent program graphs blocking once it encounters a fetching operation.
 Once all program paths are either finished or blocking all the blocking requests are executed in what is called a `round'.
 Once the results come back the paths are resumed.
-A very simple example can be seen in Figure~\ref{fig:haxl-basic-example}. 
+A very simple example can be seen in Figure~\ref{fig:haxl-basic-example}.
+
+In the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016} we criticise how the benefits of the Haxl framework require use of special functor operations, such as lifting the \texttt{intersection} operation into the Functor with \texttt{pure} and applying the arguments with \texttt{<*>}.
+It is much more difficult writing this kind of code than the obvious and straight forward monadic code from Figure~\ref{fig:monadic-common-friends}.
+For small examples rewrites like that are not as difficult, but as the program gets larger and more complicated so increases the complexity of maintaining this particular style of writing code.
+
+\begin{figure}[h]
+\begin{minted}{Haskell}
+commonFriends a b = do
+    fa <- friendsOf a
+    fb <- friendsOf b
+    return (fa `intersection` fb)
+\end{minted}
+\caption{Monadic version of \texttt{commonFriends}}
+\label{fig:monadic-common-friends}
+\end{figure}
 
 \begin{figure}
 \begin{minted}{Haskell}
@@ -54,7 +69,7 @@ A runtime traverses the that AST, finds parallel rounds of fetches and executes 
 Datasources can be arbitrary user defined targets for IO actions such as databases, network requests or filesystem IO.
 However datasources must be defined separately and only for those defined datasources the optimisation can be leveraged.
 
-Defining a datasource in Haxl means defining a set of actions on the source in form of a GADT, see Figure~\ref{fig:defining-requests-in-haxl} .
+Defining a datasource in Haxl means defining a set of actions on the source in form of a GADT\cite{PeytonJones:2006:SUT:1160074.1159811}, see Figure~\ref{fig:defining-requests-in-haxl} .
 
 \begin{figure}
 \begin{minted}{Haskell}
