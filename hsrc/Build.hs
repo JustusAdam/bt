@@ -14,6 +14,8 @@ import           Graphics.Rendering.Chart.Backend.Diagrams
 import           Graphics.Rendering.Chart.Easy
 import           Text.Printf
 import Experiment.Haxl.Types as Types
+import Data.Maybe (fromJust)
+import Graphics.Rendering.Chart.Drawing
 
 
 readDecOrFail :: FromJSON a => FilePath -> Action a
@@ -51,6 +53,18 @@ readData sourceData = do
     mapM (\(name, file) -> (name, ) <$> readDecOrFail file) sourceData
 
 
+renderWithDefaultStyle :: (Default (Layout a b), ToRenderable (Layout a b), MonadIO m) => FilePath -> EC (Layout a b) () -> m ()
+renderWithDefaultStyle filename inner =
+      void $ liftIO $ toFile (def & fo_format .~ EPS & fo_size .~ (800, 400)) filename $ do
+          layout_x_axis . laxis_title_style . font_size .= 15.0
+          layout_x_axis . laxis_style . axis_label_gap .= 20.0
+          layout_y_axis . laxis_title_style . font_size .= 15.0
+          layout_y_axis . laxis_style . axis_label_gap .= 20.0
+          layout_margin .= 50
+          inner
+--    void $ liftIO $ cBackendToFile (def & fo_format .~ EPS) (withScaleY 0.5 $ toRenderable $ execEC inner) filename
+
+
 smapExperimentSource =
     [ ("Haxl", "plotting/haskell-map.json")
     , ("Yauhau", "plotting/yauhau-map-monad.json")
@@ -61,8 +75,7 @@ smapExperiment filename = do
 
     let groupedAndSorted = map (second $ percentagesToRounds prctMaps) values
 
-    liftIO $ toFile (def & fo_format .~ EPS) filename $ do
-        layout_title .= "Transformation performance"
+    renderWithDefaultStyle filename $ do
         layout_x_axis . laxis_title .= "Percentage of mapping nodes during generation"
         layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
@@ -71,12 +84,11 @@ smapExperiment filename = do
 ifExperiment filename = do
     raw <- readDecOrFail "plotting/yauhau-if-monad.json"
 
-    let (inline, noinline) = partition ((== Just True) . (genConf >=> inlineIf)) raw
+    let (inline, noinline) = partition (fromJust . (genConf >=> inlineIf)) raw
     let values = [("Inline", inline), ("Precomputed", noinline)]
     let groupedAndSorted = map (second $ percentagesToRounds prctIfs) values
 
-    liftIO $ toFile (def & fo_format .~ EPS) filename $ do
-        layout_title .= "Transformation performance"
+    renderWithDefaultStyle filename $ do
         layout_x_axis . laxis_title .= "Percentage of conditional nodes"
         layout_y_axis . laxis_title .= "Number of rounds performed"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
@@ -93,8 +105,7 @@ ifExperimentDelayed filename = do
     let values = [("Inline", inline), ("Precomputed", noinline)]
     let groupedAndSorted = map (second $ percentagesToTime prctIfs) values
 
-    liftIO $ toFile (def & fo_format .~ EPS) filename $ do
-        layout_title .= "Transformation performance"
+    renderWithDefaultStyle filename $ do
         layout_x_axis . laxis_title .= "Percentage of conditional nodes"
         layout_y_axis . laxis_title .= "Program execution time"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
@@ -109,8 +120,7 @@ funcExperiment filename = do
 
     let groupedAndSorted = map (second $ percentagesToRounds prctFuns) values
 
-    liftIO $ toFile (def & fo_format .~ EPS) filename $ do
-        layout_title .= "Transformation performance"
+    renderWithDefaultStyle filename $ do
         layout_x_axis . laxis_title .= "Percentage of function nodes during generation"
         layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
         mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted

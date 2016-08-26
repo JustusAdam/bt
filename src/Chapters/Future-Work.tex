@@ -1,0 +1,11 @@
+%!TEX root = ../thesis.tex
+\chapter{Future Work}
+
+\label{ch:future-work}
+
+\section{Formalised rewrite rules}
+
+Rewrite rules as applied by both the context unrolling and the batching transformation are not formally verified to be correct.
+An aim of future work in this direction, not just from \yauhau{} but the Ohua system in general could be the formulation of a core set of program rewrites, primitives, which are then verified to be correct.
+Subsequently the transformations as described in Chapters~\ref{ch:if-transformation},~\ref{ch:smap-transformation} and~\ref{ch:Yauhau} could be described in those abstract terms and verified to be correct and semantics preserving.
+We have found inspiration for this in a paper ``Generating Performance Portable Code Using Rewrite Rules: From High-level Functional Expressions to High-performance OpenCL Code''\cite{Steuwer:2015:GPP:2858949.2784754}, where formally verified rules are used to decompose and transform high-level functional expressions.
