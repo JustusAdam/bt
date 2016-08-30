@@ -1,4 +1,6 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections     #-}
 module Main where
 
 
@@ -6,16 +8,17 @@ import           ClassyPrelude
 import           Control.Monad                             (replicateM)
 import           Data.Aeson                                (FromJSON,
                                                             eitherDecode)
+import           Data.Maybe                                (fromJust)
 import           Development.Shake
 import           Development.Shake.Command
 import           Development.Shake.FilePath                as SFP
 import           Development.Shake.Util
+import           Experiment.Haxl.Types                     as Types
 import           Graphics.Rendering.Chart.Backend.Diagrams
+import           Graphics.Rendering.Chart.Drawing
 import           Graphics.Rendering.Chart.Easy
 import           Text.Printf
-import Experiment.Haxl.Types as Types
-import Data.Maybe (fromJust)
-import Graphics.Rendering.Chart.Drawing
+import           Text.Printf
 
 
 readDecOrFail :: FromJSON a => FilePath -> Action a
@@ -28,7 +31,7 @@ fdiv a b = realToFrac a / realToFrac b
 
 
 levelsToRounds :: MeasuredGraphs -> [(Int, Float)]
-levelsToRounds = map average . groupAllOn Types.levels
+levelsToRounds = sortOn fst . map average . groupAllOn Types.levels
   where
     average grs = (Types.levels (headEx grs), avrg)
       where
@@ -36,7 +39,7 @@ levelsToRounds = map average . groupAllOn Types.levels
 
 
 percentagesToSomething :: (Ord a, Real b) => (MeasuredGraph -> b) -> (GenConf -> Maybe a) -> MeasuredGraphs -> [(a, Float)]
-percentagesToSomething getSomething getter = catMaybes . map average . groupAllOn (genConf >=> getter)
+percentagesToSomething getSomething getter = sortOn fst . catMaybes . map average . groupAllOn (genConf >=> getter)
   where
     average e = do
         c <- headMay e >>= genConf
@@ -57,12 +60,56 @@ renderWithDefaultStyle :: (Default (Layout a b), ToRenderable (Layout a b), Mona
 renderWithDefaultStyle filename inner =
       void $ liftIO $ toFile (def & fo_format .~ EPS & fo_size .~ (800, 400)) filename $ do
           layout_x_axis . laxis_title_style . font_size .= 15.0
-          layout_x_axis . laxis_style . axis_label_gap .= 20.0
+          layout_x_axis . laxis_style . axis_label_gap .= 10.0
           layout_y_axis . laxis_title_style . font_size .= 15.0
-          layout_y_axis . laxis_style . axis_label_gap .= 20.0
-          layout_margin .= 50
+          layout_y_axis . laxis_style . axis_label_gap .= 10.0
+          layout_margin .= 30
           inner
 --    void $ liftIO $ cBackendToFile (def & fo_format .~ EPS) (withScaleY 0.5 $ toRenderable $ execEC inner) filename
+
+
+getAverageDifference :: Action Float
+getAverageDifference = do
+    haxl <- readDecOrFail "plotting/haskell-vanilla.json"
+    yauhau <- readDecOrFail "plotting/yauhau-vanilla-monad.json"
+    let differences = map (\((l1, v1), (l2, v2)) -> assert (l1 == l2) $ v2 / v1) $ zip (levelsToRounds haxl) (levelsToRounds yauhau)
+
+    return $ sum differences `fdiv` length differences
+
+
+smapPrimerSource =
+    [ ("Haxl", "plotting/haskell-map-primer.json")
+    , ("Yauhau", "plotting/yauhau-map-primer-monad.json")
+    ]
+
+
+smapPrimer filename = do
+    values <- readData smapPrimerSource
+    let groupedAndSorted = map (second $ percentagesToRounds prctFuns) values
+
+    renderWithDefaultStyle filename $ do
+        layout_x_axis . laxis_title .= "Number of levels in the graph"
+        layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
+        mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
+
+
+vanillaExperimentSource =
+    [ ("Haxl", "plotting/haskell-vanilla.json" )
+    , ("Yauhau", "plotting/yauhau-vanilla-monad.json")
+    ]
+
+
+vanillaExperiment filename = do
+    values <- readData vanillaExperimentSource
+    let groupedAndSorted = map (second $ percentagesToRounds prctFuns) values
+
+    let [haxl, yauhau] = map snd groupedAndSorted
+
+    renderWithDefaultStyle filename $ do
+        layout_x_axis . laxis_title .= "Number of levels in the graph"
+        layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
+        mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
+
 
 
 smapExperimentSource =
@@ -71,14 +118,23 @@ smapExperimentSource =
     ]
 
 smapExperiment filename = do
-    values <- readData smapExperimentSource
+    let readData base withMap = (,) <$> readDecOrFail base <*> readDecOrFail withMap
+    -- readData = liftM2 (,) `on` readDecOrFail
+    haxl <- readData "plotting/haskell-map-primer.json" "plotting/haskell-map.json"
+    yauhau <- readData "plotting/yauhau-map-primer-monad.json" "plotting/yauhau-map-monad.json"
 
-    let groupedAndSorted = map (second $ percentagesToRounds prctMaps) values
+    let h1 = mapFromList $ percentagesToRounds prctFuns $ fst haxl :: HashMap Float Float
+        y1 = mapFromList $ percentagesToRounds prctFuns $ fst yauhau :: HashMap Float Float
+
+        processedHaxl = map (\(p, v) -> (p, v * fromJust (liftM2 (/) (lookup p y1) (lookup p h1)))) $
+          percentagesToRounds prctMaps $ snd haxl
+        processedYauhau = percentagesToRounds prctMaps $ snd yauhau
 
     renderWithDefaultStyle filename $ do
         layout_x_axis . laxis_title .= "Percentage of mapping nodes during generation"
         layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
-        mapM_ (\(name, data_) -> plot $ line name [data_]) groupedAndSorted
+        plot $ line "Haxl" [processedHaxl]
+        plot $ line "Yauhau" [processedYauhau]
 
 
 ifExperiment filename = do
@@ -137,6 +193,7 @@ plots =
     , "func-experiment.eps"
     , "if-experiment.eps"
     , "if-experiment-delayed.eps"
+    , "smap-primer-experiment.eps"
     ]
 figures =
     [ "basic-if-rewrite-original.pdf"
@@ -228,6 +285,8 @@ main = shakeArgs shakeOptions{shakeFiles=buildDir} $ do
     "_build/Figures/func-experiment.eps" %> funcExperiment
     "_build/Figures/if-experiment.eps" %> ifExperiment
     "_build/Figures/if-experiment-delayed.eps" %> ifExperimentDelayed
+    "_build/Figures/vanilla-experiment.eps" %> vanillaExperiment
+    "_build/Figures/smap-primer-experiment.eps" %> smapPrimer
 
     "_build//*.tex" %> copyFromSrc
     "_build//*.cls" %> copyFromSrc
