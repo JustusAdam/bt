@@ -9,25 +9,25 @@
 In the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016}, authored by Sebastian Ertel, Andrés Goens, Jeronimo Castrillon and myself, \yauhau{}, a plugin for the Ohua\cite{Ertel:2015:OID:2807426.2807431}\cite{Ohua:library:link} compiler, was introduced.
 \yauhau{} rewrites a program to achieve efficient IO whilst allowing the programmer to write very concise and straight forward code.
 It is inspired by a similar system called Haxl, see Chapter~\ref{ch:related-work}.
-In the paper explained the basic idea of finding data independent reading IO actions and combining them into batched requests, caching requests as well as executing them concurrently.
-Because of our compile time transformation model however \yauhau{} faces challenges when confronted with control flow structures such as \texttt{if} and iteration.
-Much headway in solving these challenges was made in the paper itself, but a generalisation of handling control flow is needed now.
+In the paper we explained the basic idea of finding data independent, reading IO actions, combining them into batched requests, caching them as well as executing them concurrently.
+Because of our compile time transformation model however \yauhau{} faces challenges when confronted with control flow structures such as \texttt{if} and iteration in the form of a mapping operation called \texttt{smap}.
+Much headway in solving these challenges was made in the paper itself, but a generalisation of handling control flow is needed.
 
-Also introduced in the paper is the notion of a mutative IO action in the form of \texttt{read} requests.
-We already explained how we ensure results of mutative actions are visible to the read requests despite the existence of a cache, however there is still more semantic consistency to be desired with read requests.
-Namely that when algorithm $a$ depends on the result of running algorithm $b$, all writes and reads in $b$ should be performed before reads or writes in $a$ are performed.
-There is currently no guarantee that this would happen because of the dataflow semantics of the underlying system Ohua.
+Also introduced in the paper is the notion of a mutative IO action in the form of \texttt{write} requests.
+We already explained how we ensure results of mutative actions are visible to the \texttt{read} requests despite the existence of a cache, however there is still more semantic consistency to be desired between \texttt{read} and \texttt{write} requests.
+Namely that when algorithm\footnote{An ``algorithm'' is like a function in the Ohua framework, see Chapter~\ref{ch:Ohua}.} $a$ depends on the result of running algorithm $b$, all reads and writes in $b$ should be performed before reads or writes in $a$ are performed.
+This is currently not guaranteed due to the dataflow semantics of the underlying system Ohua.
 
 In this thesis I want to explain in much more detail the concrete ways in which I handle control flow in \yauhau{} and explain implementation considerations and decisions made during and after writing of the paper but which we unfortunately did not have space for in the paper itself.
-Chapter~\ref{ch:smap-transformation} concerns itself with \texttt{smap} and Chapter~\ref{ch:if-transformation} explains in more detail the handling of \texttt{if}.
-I also want to introduce the reader to a new generalised concept, called context (Chapter~\ref{ch:Context}), which has now been added to Ohua and allows the correct handling of nested control flow structures.
+Chapter~\ref{ch:smap-transformation} concerns itself with iteration (\texttt{smap}) and Chapter~\ref{ch:if-transformation} explains in more detail the handling of conditionals (\texttt{if}).
+I also want to introduce the reader to a new generalised concept, called context (Chapter~\ref{ch:Context}), which has now been added to Ohua and allows, among other things, the correct handling of nested control flow structures.
 
 After that in Chapter~\ref{ch:trans-implementation} I will briefly describe some general implementation decisions for \yauhau{} and optimisations which were added.
 
-Following the contexts I will introduce another recent addition to \yauhau{} which we hinted at briefly in the paper, side effects and how to handle them semantically (Chapter~\ref{ch:side-effects}).
+In Chapter~~\ref{ch:side-effects} I will move onto the semantically correct handling of side effects and how this is ensured in Ohua/\yauhau{}.
 This chapter introduces the concept of controlled side effects in a functional and parallel system such as Ohua by means of the \yauhau{} plugin and how we intend to preserve semantics with regards to caching as well as read-write conflicts, whilst enabling easy and straight forward modularity.
 
-At the beginning however I will introduce the reader to the underlying Ohua framework (Chapter~\ref{ch:Ohua}) and the basics of the \yauhau{} plugin (Chapter~\ref{ch:Yauhau}), the latter of which includes a description of the basic IO batching transformation.
+At the beginning however I want to begin by providing some background by introducing the reader to the underlying Ohua framework (Chapter~\ref{ch:Ohua}) and the basics of the \yauhau{} plugin (Chapter~\ref{ch:Yauhau}), the latter of which includes a description of the basic IO batching transformation.
 
 Contributions of this thesis are:
 \begin{itemize}

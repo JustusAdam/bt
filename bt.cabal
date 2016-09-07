@@ -22,4 +22,8 @@ executable bt
   ghc-options:         -rtsopts -with-rtsopts=-I0
   hs-source-dirs:      hsrc, plotting
   default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude, TupleSections, LambdaCase, TypeFamilies
+  default-extensions:  NoImplicitPrelude
+                     , TupleSections
+                     , LambdaCase
+                     , TypeFamilies
+                     , OverloadedStrings

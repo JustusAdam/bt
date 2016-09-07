@@ -8,7 +8,9 @@
 \subsection{Haxl}
 
 Haxl\cite{Haxl:library:link}\cite{Marlow:2014:NFA:2692915.2628144} is a Haskell\cite{HaskellLanguage} library which provides a framework for performing data access operations with automatic batching and concurrency. It was first introduced in the paper ``There is No Fork: An Abstraction for Efficient, Concurrent, and Concise Data Access''\cite{Marlow:2014:NFA:2692915.2628144} by Simon Marlow, Louis Brandy, Jonathan Coens and Jon Purdy.
-They describe a system whereby using the Haskell abstraction of an Applicative Functor\cite{mcbride2008applicative} they find which data access operations are independent from one another and therefore may be fetched as a batch job.
+
+They describe a system where, by using the Haskell abstraction of an Applicative Functor\cite{mcbride2008applicative}, they are able to find which data access operations are independent from one another and therefore may be fetched as a batch job.
+
 As a very small example in Figure~\ref{fig:operation-in-haxl} we see a function \texttt{commonFriends}.
 The \texttt{intersection} function depends for its input on both the result of fetching the friends of \texttt{a} as well as the friends of \texttt{b}.
 However the two data fetches \texttt{friendsOf a} and \texttt{friendsOf b} are independent from one another, neither depends on the result of the other, which is what the \texttt{<*>} operator symbolises.
@@ -62,7 +64,7 @@ main =
 Muse\cite{Muse:repository:link} is a Clojure implementation of Haxl.
 Like Haxl the data access actions are defined with functors.
 This functor is a free monad which builds an AST of the program.
-A runtime traverses the that AST, finds parallel rounds of fetches and executes the code, batching I operations.
+A runtime traverses that AST, finds parallel rounds of fetches and executes the code, batching the fetch operations.
 
 \subsection{Datasources}
 
@@ -82,12 +84,13 @@ data FacebookRequest a where
 \end{figure}
 
 
-Every time you want to make a request in the program it has to be encoded into one of those actions when passed to the IO action executing function \texttt{dataFetch}.
-
-Additionally, for the cache, the \texttt{Hashable} typeclass needs to be implemented on this type as well as the \texttt{DataSourceName} and \texttt{StateKey} typeclass to identify the source.
+Every time you want to make a request in the program it has to be encoded into one of those actions.
+A Haxl function by the name of \texttt{dataFetch} can be called with an encoded request to block the path execution until a result has been obtained.
 
 The actual execution of the IO action is defined in a typeclass called \texttt{DataSource} which also has to be defined on the request type, see Figure~\ref{fig:defining-datsource-in-haxl}.
-The \texttt{DataSource} typeclass has a method called \texttt{fetch} which does the actual work of performing the desired IO action.
+The \texttt{DataSource} typeclass has a method called \texttt{fetch} which does the actual work of performing the desired IO action and is user defined.
+
+Additionally, for the cache, the \texttt{Hashable} typeclass needs to be implemented on this type as well as the \texttt{DataSourceName} and \texttt{StateKey} typeclass to identify the source.
 
 \begin{figure}
 \begin{minted}{Haskell}

@@ -167,3 +167,6 @@ I filter the IR function list for \texttt{fetch} and \texttt{write} nodes.
 Map each node to its associated algo contexts, concatenate these and finally remove duplicate entries.
 Now we have a set of read and write performing algos respectively.
 Each algorithm in the graph is then labeled with \texttt{:does-read} and \texttt{:does-write} depending on which set it is member of.
+
+Finally for each algorithm which writes the algorithm gets \texttt{seq}'ed to its algorithm boundary.
+All subsequent reading algorithms, which are not dependent on another write get \texttt{seq}'ed to the writing algorithms return value.

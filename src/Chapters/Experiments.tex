@@ -33,9 +33,38 @@ Our experiment setup for this experiment operates on several graphs of constant 
 We gradually increase the relative amount of mapping operations in the graph.
 Additionally we run the series against multiple seeds to get an average result.
 
+In order to show that we in fact achieve the same performance with maps as Haxl does we run this experiment in two configurations.
+For both configurations we operate on the same code graphs.
+After the graphs have been generated we randomly select a number of nodes, with probabilities as listed on the x-axis in the plots.
+We then change the type, and therefore the behaviour of those nodes, in two ways.
+
+\begin{enumerate}
+  \item The designated nodes become function invocations. Figure~\ref{fig:smap-experiment-primer}
+        This is equivalent to attaching a small random subgraph to the node which is run once.
+  \item The designated nodes become a an invocation of a mapping operation, \texttt{mapM} in Haxl and \texttt{smap} in \yauhau{}, over a function. Figure~\ref{fig:smap-experiment}
+\end{enumerate}
+
+For each node the invoked function and the mapped function are identical in both configurations, only the number of invocations changes.
+In the fist configuration we can then see the flat performance advantage of \yauhau{} over Haxl independent from any \texttt{smap} or \texttt{mapM}.
+We use this data to correct the data from the second experiment by this advantage to only get performance with respect to mapping operations.
+In the second experiment we run the same graph as in the fist experiment, but here the nodes which used to be function invocations are now mappings.
+The raw result data is then corrected by the difference from the previous experiment.
+For each percentage of function/mapping nodes the difference in rounds created in the first experiment (Figure~\ref{fig:smap-experiment-primer}) is subtracted from the amount of rounds created for Haxl in the second experiment (Figure~\ref{fig:smap-experiment}).
+This accounts for the flat benefit which \yauhau{} gains from the code style independence.
+As is clearly visible in the plot in Figure~\ref{fig:smap-experiment} the performance of \yauhau{} and Haxl with respect to mapping operations is identical to that of Haxl.
+Furthermore the performance with maps instead of function calls is actually identical to the performance achieved when using function calls (see ``No maps'' line in Figure~\ref{fig:smap-experiment}).
+This shows that all fetches in mappings are indeed executed in parallel, as is intended.
+
+\begin{figure}
+    \includegraphics[width=\linewidth]{../Figures/smap-primer-experiment.eps}
+    \caption{Rounds created with functions}
+    \label{fig:smap-experiment-primer}
+\end{figure}
+
 \begin{figure}
     \includegraphics[width=\linewidth]{../Figures/smap-experiment.eps}
     \caption{Number of rounds performed with maps enabled}
+    \label{fig:smap-experiment}
 \end{figure}
 
 \section{Conditionals}
@@ -184,6 +213,16 @@ The lower the number the better.
     \caption{Number of rounds performed with conditionals enabled}
 \end{figure}
 
+\begin{figure}
+    \includegraphics[width=\linewidth]{../Figures/if-experiment-fetches.eps}
+    \caption{Number of fetches performed}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[width=\linewidth]{../Figures/if-experiment-exec-time.eps}
+    \caption{Execution time}
+\end{figure}
+
 As we can see \yauhau{} generally performs better than the competition.
 This is due to the way our code generator serialises the source code.
 All computed values are first bound to local bindings and subsequent nodes may use those values as arguments.
@@ -205,5 +244,5 @@ The same behaviour can be achieved in \yauhau{} as well using the \texttt{seq} f
 
 \begin{figure}
     \includegraphics[width=\linewidth]{../Figures/if-experiment-delayed.eps}
-    \caption{Latency with conditionals enabled}
+    \caption{Latency in relation to percentage of slow data sources}
 \end{figure}

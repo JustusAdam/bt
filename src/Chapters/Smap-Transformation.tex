@@ -15,23 +15,62 @@ map (f . g) == map f . map g
 
 The basic transformation steps can be described as follows:
 
-The function inside the map is separated into a computation before the fetch, the fetch, and a computation after the fetch.
+The function inside the map is separated into a computation before the fetch, the fetch, and a computation after the fetch, see \texttt{decomposed} in Figure~\ref{fig:map-decomposition-in-code}.
+Since there may be data flowing from \texttt{before} to \texttt{after} which does not pass through the \texttt{fetch} we choose \texttt{before} and \texttt{after} such that \texttt{before} returns a tuple where the first part of the tuple contains only the data our fetch can operate on and the second part of the tuple contains any additional data which needs to flow between \texttt{before} and \texttt{after}.
+\texttt{after} then accepts a tuple where the first part is the result of executing the fetch and the second part is the untouched additional data flowing between \texttt{before} and \texttt{after}.
+In the middle we apply the fetch function to only the first part of the tuple with the higher order function \texttt{first}.
 
-\begin{verbatim}
-map (after . fetch . before)
-\end{verbatim}
+\begin{figure}
+\begin{minted}{Haskell}
+fetchMany :: [FetchData] -> [FetchResult]
+fetchMany = -- omitted
 
-We use the rule from above to separate the composed function into separate maps.
+original :: forall a b. [a] -> [b]
+original = map f
+    where f :: a -> b
+          f = -- omitted
 
-\begin{verbatim}
-map after . map fetch . map before
-\end{verbatim}
+decomposed :: forall a b free. [a] -> [b]
+decomposed = map (after . first fetch . before)
+    where before :: a -> (FetchData, free)
+          before = -- omitted
 
-And finally we replace the \texttt{map fetch} by wrapping the list of requests we get from \texttt{before} in a request tree and fetch only that.
+          fetch :: FetchData -> FetchResult
+          fetch = -- omitted
 
-\begin{verbatim}
-map after . mkList . fetch . mkTree . map before
-\end{verbatim}
+          after :: (FetchResult, free)
+          after = -- omitted
+
+fission :: forall a b free. [a] -> [b]
+fission =
+    (map after :: [(FetchResult, free)] -> [b])
+    . (map (first fetch) :: [(FetchData, c)] -> [(FetchResult, c)])
+    . (map before :: [a] -> [(FetchData, free)])
+    where ...
+
+unzipped :: forall a b free. [a] -> [b]
+unzipped =
+    map after
+    . (uncurry zip :: ([c], [d]) -> [(c, d)])
+    . (first
+        (map fetch :: [FetchData] -> [FetchResult])
+        :: ([FetchData], g) -> ([FetchResult], g))
+    . (unzip :: [(e, f)] -> ([e], [f]))
+    . map before
+    where ...
+
+replaced :: forall a b free. [a] -> [b]
+replaced =
+    map after
+    . uncurry zip
+    . first fetchMany
+    . unzip
+    . map before
+\end{minted}
+\caption{Decomposing maps in Haskell}
+\label{fig:map-decomposition-in-code}
+\end{figure}
+
 
 \section{Implementation detail}
 
