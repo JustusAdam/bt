@@ -1,5 +1,5 @@
 %!TEX root = ../thesis.tex
-\chapter{Transformation Implementation Guidelines}
+\chapter{Transformation Implementation}
 \label{ch:trans-implementation}
 
 % TODO find a better word than 'guidelines'
@@ -52,7 +52,7 @@ This means the overall transformation is divided into three steps
 
 Optimisations of this kind are very high level.
 They operate entirely on the dataflow IR and only concern themselves with \yauhau{} and Ohua internal operators.
-Optimisations are run until the graph doe not change anymore.
+Optimisations are repeated until the graph does not change anymore.
 
 
 \subsection{Identities}
@@ -86,11 +86,3 @@ A second \texttt{identity} optimisation is the removal of duplicate identities.
 If two identities with the same input are destructured into the same output they are redundant.
 Both are removed from the graph and data is destructured at the source.
 Both context arcs are connected to the respective recipients.
-
-There is an identical operator in the Ohua framework currently, called \texttt{value}, which is used to make discrete values conditional.\footnote{This solves the problem of how does one connect a context arc to a value.}
-A potential and highly probable minor future project would be to refine and potentially expand the \texttt{identity} optimisations, move them into the Ohua framework itself and replace \texttt{value} with \texttt{identity}.
-
-\subsection{Merge selects}
-
-The \texttt{select} operator is multiple arity.
-Therefore if two select operators immediately follow each other it is safe to simply wire all inputs of the first one directly into the second one.

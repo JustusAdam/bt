@@ -14,31 +14,32 @@ Because of our compile time transformation model however \yauhau{} faces challen
 Much headway in solving these challenges was made in the paper itself, but a generalisation of handling control flow is needed.
 
 Also introduced in the paper is the notion of a mutative IO action in the form of \texttt{write} requests.
-We already explained how we ensure results of mutative actions are visible to the \texttt{read} requests despite the existence of a cache, however there is still more semantic consistency to be desired between \texttt{read} and \texttt{write} requests.
+We already explained how we ensure results of mutative actions are visible to the \texttt{read} requests in the presence of a cache, however there is still more semantic consistency to be desired between \texttt{read} and \texttt{write} requests.
 Namely that when algorithm\footnote{An ``algorithm'' is like a function in the Ohua framework, see Chapter~\ref{ch:Ohua}.} $a$ depends on the result of running algorithm $b$, all reads and writes in $b$ should be performed before reads or writes in $a$ are performed.
-This is currently not guaranteed due to the dataflow semantics of the underlying system Ohua.
+This is currently not guaranteed but we would consider it expected behaviour.
 
-In this thesis I want to explain in much more detail the concrete ways in which I handle control flow in \yauhau{} and explain implementation considerations and decisions made during and after writing of the paper but which we unfortunately did not have space for in the paper itself.
-Chapter~\ref{ch:smap-transformation} concerns itself with iteration (\texttt{smap}) and Chapter~\ref{ch:if-transformation} explains in more detail the handling of conditionals (\texttt{if}).
+In this thesis I want to explain in much more detail the concrete ways in which I handle control flow in \yauhau{} and explain implementation considerations.
+Chapter~\ref{ch:smap-transformation} therefore concerns itself with iteration (\texttt{smap}) and Chapter~\ref{ch:if-transformation} explains in more detail the handling of conditionals (\texttt{if}).
+
 I also want to introduce the reader to a new generalised concept, called context (Chapter~\ref{ch:Context}), which has now been added to Ohua and allows, among other things, the correct handling of nested control flow structures.
 
-After that in Chapter~\ref{ch:trans-implementation} I will briefly describe some general implementation decisions for \yauhau{} and optimisations which were added.
+After that in Chapter~\ref{ch:trans-implementation} I will describe some general implementation decisions for \yauhau{} and necessary optimisations following from some of those.
 
-In Chapter~~\ref{ch:side-effects} I will move onto the semantically correct handling of side effects and how this is ensured in Ohua/\yauhau{}.
+In Chapter~~\ref{ch:side-effects} I will move onto the semantically correct handling of side effects and how this is ensured by \yauhau{}.
 This chapter introduces the concept of controlled side effects in a functional and parallel system such as Ohua by means of the \yauhau{} plugin and how we intend to preserve semantics with regards to caching as well as read-write conflicts, whilst enabling easy and straight forward modularity.
 
-At the beginning however I want to begin by providing some background by introducing the reader to the underlying Ohua framework (Chapter~\ref{ch:Ohua}) and the basics of the \yauhau{} plugin (Chapter~\ref{ch:Yauhau}), the latter of which includes a description of the basic IO batching transformation.
-
-Contributions of this thesis are:
-\begin{itemize}
-    \item A more detailed description, including implementation considerations and decisions, of the \textbf{if and smap transformations}.
-    \item The generalisation of non structurally emergent dataflow graph properties into a concept called \textbf{Context}, its detection and use to handle nested control flow in \yauhau{}.
-    \item An optional graph transformation in \yauhau{} used to \textbf{preserve write semantics} in programs using the \yauhau{} batching.
-    \item An evaluation of the effect of precomputed conditional branches on latency.
-    \item New \textbf{experiments} showing the performance of the \yauhau{} plugin in comparison to the existing technologies Haxl and Muse in \textbf{programs with conditionals and mapping}.
-    \item \textbf{Extensions to the random code generator}~\cite{Goens-rand-code-graph} used in the \yauhau{} paper to generate test programs.
-    These extenstions enable \textbf{support for mapping operations} as well as different \textbf{generation methods for conditionals} in the code generator.
-\end{itemize}
+At the beginning however I want to first provide some background by introducing the reader to the underlying Ohua framework (Chapter~\ref{ch:Ohua}) and the basics of the \yauhau{} plugin (Chapter~\ref{ch:Yauhau}), the latter of which includes a description of the basic IO batching transformation.
+%
+% Contributions of this thesis are:
+% \begin{itemize}
+%     \item A more detailed description, including implementation considerations and decisions, of the \textbf{if and smap transformations}.
+%     \item The generalisation of non structurally emergent dataflow graph properties into a concept called \textbf{Context}, its detection and use to handle nested control flow in \yauhau{}.
+%     \item An optional graph transformation in \yauhau{} used to \textbf{preserve write semantics} in programs using the \yauhau{} batching.
+%     \item An evaluation of the effect of precomputed conditional branches on latency.
+%     \item New \textbf{experiments} showing the performance of the \yauhau{} plugin in comparison to the existing technologies Haxl and Muse in \textbf{programs with conditionals and mapping}.
+%     \item \textbf{Extensions to the random code generator}~\cite{Goens-rand-code-graph} used in the \yauhau{} paper to generate test programs.
+%     These extenstions enable \textbf{support for mapping operations} as well as different \textbf{generation methods for conditionals} in the code generator.
+% \end{itemize}
 
 %
 % This thesis intends to improve on the current implementation of this plugin, provide explanation as to why adjustments to the implemetation are necessary in the first place, document adjustments made to the Ohua core which enable the plugin to function and finally expand on the experimental evaluation started in the paper, providing comparative data for performance of our plugin against frameworks with similar functionality.

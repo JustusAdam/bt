@@ -9,15 +9,16 @@ Following I will briefly outline the basic transformation in \yauhau{} which is 
 
 \yauhau{} hooks into the compiler after the Clojure source has been parsed and transformed into the dataflow IR.
 It is a pure IR to IR transformation.
-In the flow graph in Figure~\ref{fig:ohua-compiler-flow} \yauhau{} would be run during the IR optimisation step.
+In the flow graph in Figure~\ref{fig:ohua-compiler-flow} \yauhau{} would be run as part of the IR optimisation step.
 Additionally a map of context information is given to the plugin.
-The precise nature of this context information will be explained in section \ref{ch:Context} and is irrelevant to the basic \yauhau{} idea and transformation.
+The precise nature of this context information will be explained in section \ref{ch:Context} its information is used in the transformations of Chapter~\ref{ch:if-transformation} and Chapter~\ref{ch:smap-transformation}.
+It is irrelevant to the basic \yauhau{} idea and transformation.
 
 Fundamentally \yauhau{} performs a graph transformation on the dataflow graph it has been given in form of the IR.
-The goal behind this transformation is to find sets of IO operations which are data independent from each other and execute them as a batch job.
-This is functionally similar to the approach taken by Haxl\cite{Haxl:library:link}, a Haskell library, also with the aim of optimising IO batching and the inspiration for the original paper.
+The goal behind this transformation is to find sets of IO operations which are data independent from each other.
+This is functionally similar to the approach taken by Haxl\cite{Haxl:library:link}, see Chapter~\ref{ch:related-work}.
 Haxl leverages the Monad and Applicative abstractions provided by the Haskell language and base library to propagate a list of parallel executable IO actions through the program path, blocking each path as soon as an IO action is encountered.
-This is a dynamic way of finding parallel IO actions, i.e. a runtime data structure (Data.Sequence.Seq) is populated as the program executes.
+This is a dynamic way of finding parallel IO actions, i.e. at runtime a data structure (Data.Sequence.Seq) is populated with pending requests.
 \yauhau{} takes a different approach and statically finds parallel IO actions at compile time.
 
 \begin{figure}
@@ -26,25 +27,33 @@ This is a dynamic way of finding parallel IO actions, i.e. a runtime data struct
     \label{fig:yauhau-rewrite-flow}
 \end{figure}
 
-As a slight spoiler you can see the full \yauhau{} transformation flow in Figure~\ref{fig:yauhau-rewrite-flow}.
+You can see the full \yauhau{} transformation flow in Figure~\ref{fig:yauhau-rewrite-flow}.
 We sill discuss the individual parts of this flow graph in the upcoming sections.
 
 \section{Runtime execution}
 
-In \yauhau{} as well as Haxl once every remaining program path depends on data from an IO action a new round of fetches is being executed.
-The list of parallel fetches is grouped into sublists on the data source they are trying to access.
-Each sublist is handed to the respective data source which has to perform the fetch.
-In \yauhau{} this process is inherently parallel and each data source performs its request at the same time in parallel.
+In \yauhau{} an accumulative fetch node, called \texttt{\_\_accum-fetch} statically replaces a set of fetches.
+This is equivalent to a \textbf{round} in Haxl.
+The accumulator is statically wired into the call sites of the fetches it replaces.
+It has one input and one output for each \texttt{fetch} node it replaces.
+Once a request for each input is present at runtime the accumulator executes, retrieving all of the requests simultaneously.
+
+The parallel fetches are grouped into sequences of fetches on the same data source.
+Each sequence is handed to its respective data source which has to perform the fetch.
+In \yauhau{} this process is inherently parallel and each data source performs its request simultaneously.
 In Haxl the programmer can choose whether to perform an asynchronous or synchronous request.
+When all data sources are finished the results are distributed back through the corresponding outputs of the accumulator.
+A visual representation of this can be seen in Figure~\ref{fig:yauhau-transformation}.
+
 A new experimental and optional feature in \yauhau{} is to do dynamic dispatching of the finished requests.
 This means once a certain data source returns with the data, computations only depending on that data source, can continue immediately.
 
 \section{Data sources}
 
-Similar to Haxl, all data sources a user wants to access in \yauhau{} must be defined externally.
+Similar to Haxl, compare Section~\ref{subs:datasources}, all data sources a user wants to access in \yauhau{} must be defined externally.
 
 \yauhau{} has a more loose way of working with data sources than Haxl.
-IO actions in \yauhau{} are objects of the \texttt{Request} class.
+IO actions in \yauhau{} are instances of the \texttt{Request} class.
 
 \begin{figure}[h]
 \begin{minted}{Java}
@@ -75,16 +84,16 @@ public interface IDataSource<Payload, Return> {
 \label{fig:idatasource-interface-implementation}
 \end{figure}
 
-At runtime requests are grouped by the data source they are paired with and then handed to the respective source as a single list of many requests.
+At runtime requests are grouped by the data source they are paired with and then handed to the respective source as a single sequence of many requests.
 
 \section{Compile time transformation}
 
-The basic \yauhau{} transformation, as mentioned, operates entirely on a dataflow graph in form of the IR.
+The basic \yauhau{} transformation, as mentioned, operates entirely on a dataflow graph.
 The transformation does not concern itself with the kinds of nodes in the graph except for one, the \texttt{fetch} node/function which is a special node provided by the \yauhau{} library.
 Beyond that, to simplify the transformation, it operates exclusively on the structure of the graph.
-The \fetch{} node itself is a regular stateful function (See Figure~\ref{fig:fetch-implementation}) and works without the \yauhau{} transformation, although using it without the batching optimisation makes it much less useful.
-Since data sources expect iterables of requests the \texttt{fetch} operator builds one and then returns the first element from the iterable the data source returned.
-If the source works as expected this iterable should hold results of performing the requests in the same order as the requests were originally.
+The \fetch{} node itself is implemented as a regular stateful function (See Figure~\ref{fig:fetch-implementation}) and works without the \yauhau{} transformation, although using it without the batching optimisation makes it much less useful.
+Since data sources expect sequences of requests the \texttt{fetch} operator builds one and then returns the first element from the sequence of results returned by the data source.
+If the source works as expected this result sequence should hold results of performing the requests in the same order as the requests were originally.
 
 \begin{figure}[h]
 \begin{minted}{Java}
@@ -98,24 +107,26 @@ public final class FetchOp<P, R> {
     }
 }
 \end{minted}
-\caption{implementation of the \texttt{fetch} function}
+\caption{implementation of the \texttt{fetch} stateful function}
 \label{fig:fetch-implementation}
 \end{figure}
 
 \subsection{Round detection}
 
-The goal is to find a minimal set of rounds.
+The goal of the round detection is to find a minimal set of rounds.
 A `round' is a set of \texttt{fetch} nodes with no data dependencies between the nodes.
 Rounds must not overlap.
-Hence the round detection finds a minimal set of non overlapping sets of data independent \texttt{fetch nodes}.
+Hence the round detection finds a minimal set of non overlapping sets of data independent \texttt{fetch} nodes.
+
+\subsubsection{Algorithm description}
 
 After much consideration I decided to go for a very similar approach to Haxl by simulating running the graph and blocking code paths when a \texttt{fetch} node is encountered.
-Simulating the execution of the program is done by tracking three sets of items.
+Simulating the execution of the program is done by topologically visiting the nodes o the graph while tracking three sets of items.
 
 \begin{description}
 	\item[created] The set of created bindings tracks which pieces of data that flow between the nodes of the program have been created prior to a particular point in the program.
 	\item[visited] The set of visited nodes tracks which nodes were part of a previous stage.
-	\item[round] The current round consists of all \fetch{} nodes which were part of a previous stage.
+	\item[round] The current round consists of all pending \fetch{} nodes.
 	When a new fetch round is finalised it will consist of these \fetch{} nodes and the current round will be newly initialised empty.
 \end{description}
 
@@ -123,6 +134,7 @@ Since bindings are unique in the dataflow IR we can track produced data by simpl
 The set of created bindings is initialised with the input parameters of our program.
 From this point we traverse the graph in stages.
 Each stage consists of the set of graph nodes where all inflowing data has previously been created and which was not in a previous stage.
+
 For the former condition we check, for each input binding, whether the respective binding is contained in the set of \emph{created} bindings.
 To ensure the latter condition a separate set of \emph{visited} nodes is maintained and only nodes which are not members of this set are allowed in a new stage.
 Once the stage has been computed all functions in the stage are added to the \emph{visited} set.
@@ -200,6 +212,8 @@ When the round has been dispatched, indicated by the solid red line, its created
 \label{fig:round-detection}
 \end{figure}
 
+\subsubsection{Result guarantees}
+
 Adding the \fetch{} nodes to the set of visited nodes guarantees that rounds do not overlap.
 Not simulating fetch execution before the round finishes guarantees that no round contains two fetches with data dependencies between them, since the dependent fetch would never have been in a stage before the round was finished since the required binding from the first fetch would not be created before the round finishes.
 Finally since we only dispatch a round once no more executable nodes are found all other nodes have to be fully data dependent and this guarantees the set of rounds to be minimal.
@@ -232,7 +246,7 @@ For instance free variables in algorithms inside an smap have to be specially ha
 For clarification, smap is a mapping operation over a list.
 It takes two arguments, an algorithm and a list of items and for each item in the list the algorithm is executed once with the item as argument collecting the results into a new list.
 This is analogous to the \texttt{map} function in Haskell or Clojure, with the difference that there are some guarantees about execution order.
-For a usage reference see Figure
+For a usage reference see Figure~\ref{fig:free-variables-in-smap}.
 
 \begin{figure}
 \begingroup
@@ -259,12 +273,14 @@ This poses a problem in the case of smap where the target of the arc is a free v
 What Ohua does to solve this is replicate sending the packet once for each element in the mapped collection.
 
 In Yauhau we run into a similar problem.
-We do not have free variables but perform an operation which is the complete opposite, where we rewrite connections to lead to an accumulator which is positioned outside the current control flow context.
+We do not have free variables but perform an operation which is the complete opposite, where we rewrite connections to lead to an accumulator which is positioned outside the current control flow context (\texttt{smap}).
 What we do not consider during our graph transformation is how often any of the fetch operators we are merging are called in the program.
-If we have fetches in different contexts and naively accumulate them we create a similar situation to the one described above, where the inputs to the accumulator receive very different amounts of arguments, an example can be seen in Figure~\ref{fig:naive-batching-context-problem}.
+If we have fetches in different contexts and naively accumulate them we create a similar situation to the one described above, where the inputs to the accumulator receive very different amounts of data.
+An example can be seen in Figure~\ref{fig:naive-batching-context-problem}.
+
 In the example provided we can see two issues.
-When a collection, which is longer than 1 is given to smap the respective input to the accumulator would be provided with a piece of data for each item in the collection whereas the bottommost input would at the same time only receive a single piece of data.
-At the same time the topmost two inputs comes from inside an if which means that only \textbf{one} of those two accumulator inputs would receive data at any given time, whereas the other receives nothing.
+When a collection, which is longer than 1 is given to smap the respective input to the accumulator would be provided with a piece of data for each item in the collection whereas the bottommost input from \texttt{mk-req} would at the same time only receive a single piece of data.
+At the same time the topmost two inputs comes from inside an if which means that only \textbf{one} of those two accumulator inputs would receive data during any execution of this program snippet, whereas the other receives nothing.
 
 \begin{figure}
     \includegraphics[width=\textwidth]{../Figures/naive-transformation}
@@ -273,14 +289,12 @@ At the same time the topmost two inputs comes from inside an if which means that
 \end{figure}
 
 The structures which introduce issues like this are control flow structures, because they change how often or whether a particular section of code is executed.
-Unfortunately the flow of control in a program is not structurally visible in a dataflow graph.
+Unfortunately the flow of control in a program is not structurally visible in our dataflow graph.
 Therefore our accumulation transformation is unable to deal with this problem.
 
-There needs to be an additional preparation step before the batching transformation to produce an intermediate graph with certain properties such that the batching transformation is possible.
+Instead of hammering support into this transformation I decided to add additional preparation steps before the batching transformation to produce an intermediate graph with certain properties such that the batching transformation is possible.
 The properties of the graph we want are that any fetch in the same round is control flow wise in the same context, i.e. gets called the same amount of times.
-Ensuring this particular property easier if we simple pull every fetch so far out of its control flow context that it appears in the root context of the program.
-This would be analogous to pulling every fetch out into the main block of the \texttt{main} function in a C program, splitting the rest into parts between the fetches.
-Once our nodes are located there every fetch is guaranteed to be only ever called once per invocation of the program as a whole.
+Ensuring this particular property is easier if we simple pull every fetch out of any control flow context it is contained in so that it ends up being called exactly once in a given execution of the program.
 Therefore our desired property of every fetch being executed the same amount of times holds and we can proceed with the transformation.
 
 In the following Chapters I will explain how we handle \texttt{smap} (Chapter~\ref{ch:smap-transformation}) and \texttt{if} (Chapter~\ref{ch:if-transformation}) and how we generalise the two to define a pluggable, general transformation which ensures we handle nesting correctly (Chapter~\ref{ch:Context}).

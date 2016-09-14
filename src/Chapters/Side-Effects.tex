@@ -2,17 +2,12 @@
 \chapter{Side Effects}
 \label{ch:side-effects}
 
-% TODO
-% Figure 8.1 is never referenced or explained in the text.
-% “These are typical semantics as would be expected of a program written in a non-sequential language like Haskell.” -> true, which breaks modularity and it breaks the batching of Haxl across functions as argued in our paper.
-% 8.4: would benefit from describing the algorithm either in pseudo-code or Clojure code. section seems incomplete because you do not explain the final rewrite.
-
-In the application domain of \yauhau{}, which is a program that accesses a remote resource, like a database or some repository over the network, side effects are actions which modify the remote resource.
+In terms of \yauhau{}, side effects are actions which modify a remote resource that \yauhau{} is configured to access.
 They are called side effects because they violate the rules of referential transparency.
-Referential transparency is a property of pure functions and means that the result of a computation does not change, if the call sites of the referentially transparent functions are replaced by their result.
+Referential transparency is a property of pure functions and means that the result of the overall computation does not change when the call sites of the referentially transparent functions are replaced by their result.
 In \yauhau{} we make the assumption that, even though we do not control the implementation of the fetch performed by the data source or have control over the remote source, read requests are pure actions.
 This allows us to cache results and remove duplicate requests.
-In practice the remote resource may of course change as the program runs which is why we allow the programmer to choose an appropriate caching strategy with the desired tradeoff between performance and error.
+In practice the remote resource may of course change as the program runs which is why we allow the programmer to choose an appropriate caching strategy with the desired tradeoff between performance and out-of-date errors.
 
 \section{Current implementation}
 
@@ -51,11 +46,14 @@ public interface Cache {
 
 \section{Enforcing intra algorithm order}
 
-This allows programmers to obtain correct read-write semantics, however it still poses an issue due to ordering.
+The mentioned cache handling allows programmers to obtain correct read-write semantics.
+However there are still issues due to ordering.
 In Ohua order of execution is only guaranteed for operators with explicit data dependencies.
 In the example in Figure~\ref{fig:independent-actions-code} for instance it is entirely indeterministic whether the read or write is going to be executed first.
 This problem can be avoided by using an operator called \texttt{seq}.
 \texttt{seq} enforces its first argument to be fully evaluated before allowing its second argument to be evaluated.
+The inspiration for this operator comes from Haskell, which has a function called \texttt{seq}, however the semantics are subtly different.
+Whereas Haskell's \texttt{seq} only guarantees that then it returns its second arguments both arguments have been evaluated to WHNF, Ohua's \texttt{seq} guarantees that \emph{before} the latter argument is being evaluated the first has been \emph{fully} evaluated.
 In the example Figure~\ref{fig:enforcing-order-with-seq} we enforce the write to happen first using seq.
 
 \begin{figure}
@@ -105,7 +103,7 @@ In the example Figure~\ref{fig:enforcing-order-with-seq} we enforce the write to
 \end{figure}
 
 We could also achieve the same semantics by introducing data dependencies between the two function calls as seen in Figure~\ref{fig:enforcing-order-with-dd}.
-These are typical semantics as would be expected of a program written in a non sequential language like Haskell.
+These are typical semantics as would be expected of a program written in a non sequential language such as Ohua or Haskell due to laziness.
 However one problem still remains.
 
 \section{Enforcing order inter algorithm}
@@ -113,13 +111,15 @@ However one problem still remains.
 What if we have a similar situation as above, but the read and write requests are in two algorithms?
 An example of this may be seen in Figure~\ref{fig:reads-and-writes-in-algos}.
 Here we have basically the same situation as above, but this time the programmer tried to introduce the data dependency by making one algorithm depend on the result of the other.
-By normal semantics this should work, however in Ohua all algorithms are directly spliced into the main program except two boundary operators called \texttt{algo-in} and \texttt{algo-out}.
+Semantics of most languages, such as, again, Haskell for instance, this should work.
+However in Ohua all algorithms are directly spliced into the main program except for two boundary operators called \texttt{algo-in} and \texttt{algo-out}.
 The boundary operators however only track in and output to the alorithm.
 An independent fetch like the one we have here in \texttt{does-read} has no data dependency to the algorithm boundary.
-As the result of our write request is only connected to the algorithm boundary via a parameter there is no data dependency between the read and the write request after splicing.
-If as a result the order of the read and write request was nondeterministic it would be very counter intuitive to the programmer.
+As the result of our write request is only connected to the algorithm boundary, via a parameter, there is no data dependency between the read and the write request after splicing.
+
+If as a result the order of the \texttt{read} and \texttt{write} request was nondeterministic it would be very counterintuitive to the programmer.
 He would expect regular program semantics to hold in this case, which they do not do.
-There is of course still the \texttt{seq} operator, which we could use to enforce ordering and those semantics actually hold, even across algorithms, but require additional work from the programmer.
+There is of course still the \texttt{seq} operator, which we could use to enforce ordering and that would work even across algorithms, but require additional work from the programmer.
 Therefore we would like to automate the addition of \texttt{seq} operators in the program where there are independent reads or writes that may cause unexpected indeterminism.
 
 \begin{figure}
@@ -150,7 +150,7 @@ Therefore we must first identify the dependency relationships between the algori
 
 We build a directed graph of data dependencies between algorithms by first finding all distinct algorithm context frames which have been assigned in the dataflow graph of our program.
 These context frames become the nodes of our dependency graph, which is a directed graph where edges represent data flowing from the source algorithm to the target algorithm.
-Edges are calculated by first finding a algo exit nodes, called \texttt{algo-out}.
+Edges are calculated by first finding algo exit nodes, called \texttt{algo-out}.
 From an \texttt{algo-out} node we traverse the data dependencies of the program graph downwards until we either
 
 \begin{itemize}

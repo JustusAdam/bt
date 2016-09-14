@@ -16,6 +16,7 @@ import           Graphics.Rendering.Chart.Backend.Diagrams
 import           Graphics.Rendering.Chart.Drawing
 import           Graphics.Rendering.Chart.Easy
 import           Text.Printf
+import Statistics.Sample (stdDev, Sample)
 
 
 readDecOrFail :: FromJSON a => FilePath -> Action a
@@ -44,7 +45,16 @@ percentagesToSomething getSomething getter = sortOn fst . catMaybes . map averag
         return (p, sum (map getSomething e) `fdiv` length e)
 
 percentagesToRounds = percentagesToSomething rounds
-percentagesToTime = percentagesToSomething time
+-- percentagesToTime = percentagesToSomething time
+
+
+percentagesToSelected :: (Ord a, Real b) => (MeasuredGraph -> b) -> (GenConf -> Maybe a) -> MeasuredGraphs -> [(a, [b])]
+percentagesToSelected getSomething getter = sortOn fst . catMaybes . map doGet . groupAllOn (genConf >=> getter)
+  where
+    doGet e = do
+        c <- headMay e >>= genConf
+        p <- getter c
+        return (p, map getSomething e)
 
 
 readData :: FromJSON a => [(b, FilePath)] -> Action [(b, a)]
@@ -73,14 +83,53 @@ plotAll values = do
         color <- takeColor
         shape <- takeShape
         plot $ liftEC $ do
-                plot_lines_title .= name
-                plot_lines_values .= [data_]
-                plot_lines_style . line_color .= color
+            plot_lines_title .= name
+            plot_lines_values .= [data_]
+            plot_lines_style . line_color .= color
         plot $ liftEC $ do
-                plot_points_values .= data_
-                plot_points_style . point_color .= color
-                plot_points_style . point_shape .= shape
-                plot_points_style . point_radius .= 4
+            plot_points_values .= data_
+            plot_points_style . point_color .= color
+            plot_points_style . point_shape .= shape
+            plot_points_style . point_radius .= 4
+
+
+plotErrBars :: Real b => [(String, [(a, [b])])] -> EC (Layout a Double) ()
+plotErrBars values = do
+    setShapes [PointShapeCircle, PointShapeArrowHead 1, PointShapeCross]
+    for_ values $ \(name, data_) -> do
+
+        color <- takeColor
+        shape <- takeShape
+        plot $ liftEC $ do
+            plot_lines_title .= name
+            plot_lines_values .= [map (second average) data_]
+            plot_lines_style . line_color .= color
+        plot $ liftEC $ do
+            plot_errbars_values .= map toErrVal data_
+            plot_errbars_line_style . line_color .= color
+  where average thing = sum thing `fdiv` length thing
+        toErrVal (a, bs) = ErrPoint (ErrValue a a a) (ErrValue (avg - unb) avg (avg + unb))
+            where unb = stdDev (fromList $ map realToFrac bs :: Sample)
+                  avg = average bs
+
+
+plotErrBarsMinMax :: Real b => [(String, [(a, [b])])] -> EC (Layout a Double) ()
+plotErrBarsMinMax values = do
+    setShapes [PointShapeCircle, PointShapeArrowHead 1, PointShapeCross]
+    for_ values $ \(name, data_) -> do
+
+        color <- takeColor
+        shape <- takeShape
+        plot $ liftEC $ do
+            plot_lines_title .= name
+            plot_lines_values .= [map (second average) data_]
+            plot_lines_style . line_color .= color
+        plot $ liftEC $ do
+            plot_errbars_values .= map toErrVal data_
+            plot_errbars_line_style . line_color .= color
+  where average thing = sum thing `fdiv` length thing
+        toErrVal (a, bs) = ErrPoint (ErrValue a a a) (ErrValue (realToFrac $ minimumEx bs) avg (realToFrac $ maximumEx bs))
+            where avg = average bs
 
 
 getAverageDifference :: Action Float
@@ -140,7 +189,7 @@ smapExperiment filename = do
         processedNoMaps = percentagesToRounds prctMaps noMaps
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Percentage of mapping nodes during generation"
+        layout_x_axis . laxis_title .= "Probability of mapping nodes during generation"
         layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
         plotAll [("Haxl", processedHaxl), ("Yauhau", processedYauhau), ("No maps (Yauhau)", processedNoMaps)]
 
@@ -148,14 +197,41 @@ smapExperiment filename = do
 ifExperiment filename = do
     raw <- readDecOrFail "plotting/yauhau-if-monad.json"
 
-    let (inline, noinline) = partition (fromJust . (genConf >=> inlineIf)) raw
-    let values = [("Inline", inline), ("Precomputed", noinline)]
-    let groupedAndSorted = map (second $ percentagesToRounds prctIfs) values
+    let grouped = (raw :: MeasuredGraphs)
+            & map (\e -> (fromJust $ genConf e >>= prctIfs, e))
+            & groupAllOn fst
+            & map (\v@(e:_) -> (fst e, map snd v :: MeasuredGraphs))
+            & map (second prepare)
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Percentage of conditional nodes"
-        layout_y_axis . laxis_title .= "Number of rounds performed"
-        plotAll groupedAndSorted
+        layout_x_axis . laxis_title .= "Probability of conditional nodes"
+        layout_y_axis . laxis_title .= "Round difference (absolute)"
+        plotErrBarsMinMax [("Difference", grouped)]
+    where
+        prepare :: [MeasuredGraph] -> [Double]
+        prepare =
+            (\(inline, noinline) -> ((map (uncurry ((-) `on` (realToFrac . rounds))) .) . zip `on` sortOn (\(MeasuredGraph{genConf=Just c}) -> seed c)) inline noinline)
+            . partition (fromJust . (genConf >=> inlineIf))
+
+
+ifExperimentPrct filename = do
+    raw <- readDecOrFail "plotting/yauhau-if-monad.json"
+
+    let grouped = (raw :: MeasuredGraphs)
+            & map (\e -> (fromJust $ genConf e >>= prctIfs, e))
+            & groupAllOn fst
+            & map (\v@(e:_) -> (fst e, map snd v :: MeasuredGraphs))
+            & map (second prepare)
+
+    renderWithDefaultStyle filename $ do
+        layout_x_axis . laxis_title .= "Probability of conditional nodes"
+        layout_y_axis . laxis_title .= "Round difference (%)"
+        plotErrBarsMinMax [("Difference", grouped)]
+    where
+        prepare :: [MeasuredGraph] -> [Double]
+        prepare =
+            (\(inline, noinline) -> ((map (uncurry ((\h l -> (h - l) * 100 / h ) `on` (realToFrac . rounds))) .) . zip `on` sortOn (\(MeasuredGraph{genConf=Just c}) -> seed c)) inline noinline)
+            . partition (fromJust . (genConf >=> inlineIf))
 
 
 ifExperimentFetches filename = do
@@ -163,12 +239,12 @@ ifExperimentFetches filename = do
 
     let (inline, noinline) = partition (fromJust . (genConf >=> inlineIf)) raw
     let values = [("Inline", inline), ("Precomputed", noinline)]
-    let groupedAndSorted = map (second $ percentagesToSomething fetches prctIfs) values
+    let groupedAndSorted = map (second $ percentagesToSelected fetches prctIfs) values
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Percentage of conditional nodes"
+        layout_x_axis . laxis_title .= "Probability of conditional nodes"
         layout_y_axis . laxis_title .= "Number of fetches performed"
-        plotAll groupedAndSorted
+        plotErrBars groupedAndSorted
 
 
 ifExperimentExecTime filename = do
@@ -176,12 +252,12 @@ ifExperimentExecTime filename = do
 
     let (inline, noinline) = partition (fromJust . (genConf >=> inlineIf)) raw
     let values = [("Inline", inline), ("Precomputed", noinline)]
-    let groupedAndSorted = map (second $ percentagesToTime prctIfs) values
+    let groupedAndSorted = map (second $ percentagesToSelected time prctIfs) values
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Percentage of conditional nodes"
+        layout_x_axis . laxis_title .= "Probability of conditional nodes"
         layout_y_axis . laxis_title .= "Program execution time"
-        plotAll groupedAndSorted
+        plotErrBars groupedAndSorted
 
 
 ifExperimentDelayed filename = do
@@ -189,12 +265,12 @@ ifExperimentDelayed filename = do
 
     let (inline, noinline) = partition (fromJust . (genConf >=> inlineIf)) raw
     let values = [("Inline", inline), ("Precomputed", noinline)]
-    let groupedAndSorted = map (second $ percentagesToTime prctSlow) values
+    let groupedAndSorted = map (second $ percentagesToSelected time prctSlow) values
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Percentage of conditional nodes"
+        layout_x_axis . laxis_title .= "Probability of slow data fetches"
         layout_y_axis . laxis_title .= "Program execution time"
-        plotAll groupedAndSorted
+        plotErrBars groupedAndSorted
 
 funcExperimentSource =
     [ ("Haxl", "plotting/haskell-func.json")
@@ -207,7 +283,7 @@ funcExperiment filename = do
     let groupedAndSorted = map (second $ percentagesToRounds prctFuns) values
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Percentage of function nodes during generation"
+        layout_x_axis . laxis_title .= "Probability of function nodes during generation"
         layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
         plotAll groupedAndSorted
 
@@ -222,6 +298,7 @@ plots =
     [ "smap-experiment.eps"
     , "func-experiment.eps"
     , "if-experiment.eps"
+    , "if-experiment-prct.eps"
     , "if-experiment-fetches.eps"
     , "if-experiment-exec-time.eps"
     , "if-experiment-delayed.eps"
@@ -257,6 +334,12 @@ figures =
     , "redundant-identity-example-rewritten.pdf"
     , "ohua-code-example.pdf"
     , "indeterministic-code-example.pdf"
+    , "critical-path.pdf"
+    , "rewrite-not-crit-path.pdf"
+    , "rewrite-crit-path.pdf"
+    , "dominant-critical-path.pdf"
+    , "non-dominant-critical-path.pdf"
+    , "context-pointers.pdf"
     ]
 chapters =
     [ "Context.tex"
@@ -317,6 +400,7 @@ main = shakeArgs shakeOptions{shakeFiles=buildDir} $ do
     "_build/Figures/smap-experiment.eps" %> smapExperiment
     "_build/Figures/func-experiment.eps" %> funcExperiment
     "_build/Figures/if-experiment.eps" %> ifExperiment
+    "_build/Figures/if-experiment-prct.eps" %> ifExperimentPrct
     "_build/Figures/if-experiment-fetches.eps" %> ifExperimentFetches
     "_build/Figures/if-experiment-delayed.eps" %> ifExperimentDelayed
     "_build/Figures/if-experiment-exec-time.eps" %> ifExperimentExecTime

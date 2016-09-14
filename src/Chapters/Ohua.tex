@@ -6,13 +6,13 @@
 Ohua\cite{Ertel:2015:OID:2807426.2807431}\cite{Ohua:library:link} is parallelisation framework implemented in Java\cite{JavaLanguage} and Clojure\cite{ClojureLanguage}.
 
 At compile time Ohua transforms the program into a dataflow graph.
-This graph is a representation of individual chunks of code of the program and the data dependencies between them.
+This graph is a representation of some atomic parts of the program and the data dependencies between them.
 Since Ohua currently does not support recursion this graph is a DAG.
-Nodes are atomic pieces of code which are called stateful functions.
-Edges represent data dependencies.
+Nodes are call sites of atomic pieces of code, these pieces of code are called stateful functions.
+Edges represent data dependencies between the call sites.
 Edge direction indicates result and argument.
 The result of the source node is argument to the target node.
-The result value of one stateful function may be used by multiple other stateful functions and each stateful function can have multiple inputs or none at all.
+The result value of one node may be used by multiple other nodes and each node can have multiple inputs or none at all.
 An example of how this transformation looks can be seen in Figure~\ref{fig:ohua-code-example}.
 All of the called functions here, such as \texttt{vector}, \texttt{add} etc. have to be implemented as stateful functions, see Figure~\ref{fig:ohua-sfn-example}.
 
@@ -50,7 +50,6 @@ Also subsequent calls to the same node with unrelated data, as a result of a map
 This property allows us to do deterministic state modifications on an object of the class the stateful function is attached to.
 As a result we obtain pipeline parallelism.
 
-
 \begin{figure}
   \includegraphics[width=\linewidth]{../Figures/ohua-compiler-flow}
   \caption{Compiler flow of Ohua}
@@ -61,19 +60,19 @@ As a result we obtain pipeline parallelism.
 \section{Stateful Functions}
 
 
-Stateful functions are the nodes of the Ohua dataflow graph.
+Stateful functions are the implementation for the nodes of the Ohua dataflow graph.
 They represent atomic pieces of code which the Ohua runtime schedules.
-Stateful functions can be implemented in Java by annotating a method with \texttt{@defsfn}, or in Clojure by using the \texttt{defsfn} macro.
-Each stateful function has an associated class, which holds the internal, opaque state of the node.
+Stateful functions can be implemented in Java or Scala\cite{ScalaLanguage} by annotating a method with \texttt{@defsfn}, or in Clojure by using the \texttt{defsfn} macro.
+Each stateful function has an associated class, which holds an internal, opaque state of the node.
 Whenever a stateful function is referenced in code in the \texttt{ohua} or \texttt{algo} macro the runtime creates a new instance of the class in which the stateful function is implemented.
-As a result invocations of the same call site of a stateful function share an opaque state.
+As a result invocations at the same call site of a stateful function implicitly share an opaque state.
 But different call sites do not share state implicitly.
 To share state across call sites the state has to be explicitly passed to the function as an argument.
-This ensures that state sharing is transparent to the runtime without requiring in depth knowledge about the structure of the state itself.
+This ensures that state sharing is transparent to the runtime without requiring in depth knowledge about the structure of the state itself or the stateful function.
 
-When executing the dataflow graph the runtime dynamically executes nodes.
+When executing the dataflow graph the runtime dynamically schedules nodes on a configurable number of cpu cores.
 As a result the precise order in which the graph is executed is indeterministic.
-However the runtime ensures that for each node the order of its subsequent invocations is preserved which ensures correct semantics not only in the high level algorithm but also with regards to the internal, opaque state of the stateful function itself.
+However the runtime ensures that for each node the order of its subsequent invocations is preserved which ensures correct semantics not only in the high level algorithm but also with regards to the internal, opaque state of each stateful function itself.
 
 \section{Algorithms}
 
@@ -86,6 +85,7 @@ Furthermore there should not be any dependency on invocation ordering which is n
 The snippet of code in Figure~\ref{fig:indeterministic-code} for example: If this were normal Clojure code, the read would be executed before the write due to the sequential, deterministic semantics of a Clojure \texttt{let} binding.
 In Ohua however, since there are no data dependencies between \texttt{read} and \texttt{write}, the execution order of those two stateful functions is nondeterministic and they could even be executed simultaneously.
 The graph in Figure~\ref{fig:indeterministic-code} shows very nicely how at this stage there is no visible order for those two actions in the compiled graph.
+Both $read-database > write-database > compute$ and $write-database > read-database > compute$ are valid topological orderings of the dataflow graph and Ohua only guarantees \emph{a} topological call order, not which.
 When the algorithm is executed using the \texttt{ohua} or \texttt{<-ohua} macro the algorithms Clojure code is compiled into a dataflow graph and executed by the Ohua runtime.
 
 \begin{figure}
@@ -117,22 +117,22 @@ The description of the graph contains two elements:
 \begin{enumerate}
     \item \textbf{Bindings} are named data elements or alternatively can be interpreted as a data path.
     Each binding has to be unique and constant, which means it can only be assigned once, in which case we also speak of the \textit{creation} of the binding or of \textit{writing} the binding.
+    Also for any operation on the IR itself it is assumed that the value of the binding itself is not mutated as the program runs.
     However the binding may be read any number of times (including 0).
-    \item \textbf{Functions} represent call sites of stateful functions.
-    A function name references the stateful function which should be called.
+    \item A \textbf{Function} either represents the call site of a stateful function or a dataflow operator.
+    A function name references the stateful function or operator implementation which should be executed.
     A list of input, or parameter, bindings references the data which is expected as argument to the stateful function and a list of result bindings creates references to the data produced by the stateful function.
     The same stateful function can be referenced by multiple IR functions, since IR functions represent call sites of a stateful function, not the stateful function itself.
     If a binding is present in a parameter list we also speak of the binding being \textit{read}.
-    Is the binding present in the result bindings list we also speak of the binding being \textit{written} or \textit{created}\footnote{Due to the uniqueness constraint \textit{writing} and \textit{creating} are the same here.}.
+    Is the binding present in the result bindings list we also speak of the binding being \textit{written} or \textit{created}\footnote{Due to the uniqueness constraint \textit{writing} and \textit{creating} are equivalent.}.
 \end{enumerate}
 
 Any IR graph can be easily serialised into a Clojure \texttt{let} form preserving the semantics of the graph.
-The serialisation of the dataflow IR into a human readable form makes it easy to reason about semantics of the program, which in turn makes it easier for a programmer to debug the program.
-Additionally theoretical validity of a graph can be shown by showing that the corresponding Clojure program is valid.
+The serialisation of the dataflow IR into a human readable form makes it easier to reason about semantics of the program, which in turn makes it easier for a programmer to debug the program.
 
 \subsection{Implementation}
 
-The actual implementation of the graph is simply a list of functions, see Figure~\ref{fig:concrete-ir-snippet}.
+The actual implementation of the graph is simply a \texttt{Vector} of functions, see Figure~\ref{fig:concrete-ir-snippet}.
 Each function is a Clojure record with fields for a unique id, the name of the function, a vector of input bindings and a binding or a vector of bindings as result values.
 By moving result lists to the left and a putting a Clojure function call to the right this graph can be represented as a Clojure \texttt{let} form, see Figure~\ref{fig:ir-as-clojure}.
 

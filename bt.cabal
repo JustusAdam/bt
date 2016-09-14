@@ -18,7 +18,7 @@ cabal-version:       >=1.10
 executable bt
   main-is:             Build.hs
   -- other-extensions:
-  build-depends:       base >=4.8 && <4.9, shake >=0.15 && <0.16, Chart, Chart-diagrams, aeson, classy-prelude, haxl-test-generated-graph
+  build-depends:       base >=4.8 && <4.9, shake >=0.15 && <0.16, Chart, Chart-diagrams, aeson, classy-prelude, haxl-test-generated-graph, statistics
   ghc-options:         -rtsopts -with-rtsopts=-I0
   hs-source-dirs:      hsrc, plotting
   default-language:    Haskell2010

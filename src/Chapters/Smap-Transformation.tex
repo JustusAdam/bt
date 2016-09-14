@@ -5,20 +5,32 @@
 
 \section{Simplified}
 
-Aim of the smap transformation step is to merge a bounded number of fetches into a single fetch.
-How many times the fetch would be executed is not known at compile time but only given at runtime by the length of the collection which is being mapped over.
-Basis for the transformation itself is that a mapping operation over two composed functions is semantically identical to the composition of one mapping operation with one function each, in the same order.
+Aim of the smap transformation step is to merge a bounded and unknown number of \fetch{}es into a single \fetch{}.
+How many times the \fetch{} would be executed is not known at compile time but only given at runtime by the length of the collection which is being mapped over.
+Basis for the transformation itself is that a mapping operation over two composed functions is semantically identical to the composition of one mapping operation with one function each, in the same order, see Figure~\ref{fig:map-comp-decomp}.
 
-\begin{verbatim}
+\begin{figure}
+\begin{minted}{Haskell}
 map (f . g) == map f . map g
-\end{verbatim}
+\end{minted}
+    \caption{Equivalence of map composition/decomposition}
+    \label{fig:map-comp-decomp}
+\end{figure}
 
-The basic transformation steps can be described as follows:
 
+The basic transformation steps can be described as follows.
 The function inside the map is separated into a computation before the fetch, the fetch, and a computation after the fetch, see \texttt{decomposed} in Figure~\ref{fig:map-decomposition-in-code}.
 Since there may be data flowing from \texttt{before} to \texttt{after} which does not pass through the \texttt{fetch} we choose \texttt{before} and \texttt{after} such that \texttt{before} returns a tuple where the first part of the tuple contains only the data our fetch can operate on and the second part of the tuple contains any additional data which needs to flow between \texttt{before} and \texttt{after}.
 \texttt{after} then accepts a tuple where the first part is the result of executing the fetch and the second part is the untouched additional data flowing between \texttt{before} and \texttt{after}.
 In the middle we apply the fetch function to only the first part of the tuple with the higher order function \texttt{first}.
+
+Subsequently we can transform the single map into multiple according to the rule in Figure~\ref{fig:map-comp-decomp}.
+Then we restructure the data pulling the tuple out of the sequence using \texttt{unzip} and repackage later with \texttt{zip}.
+Lastly we can replace \texttt{map fetch} with \texttt{fetchMany}.
+
+In Figure~\ref{fig:map-decomposition-in-code} you can see this rewrite described in stages of Haskell code which should show the correctness in so far as each stage would typecheck and the top level type signature of each stage does not change.
+It is no proof of semantic correctness but provided as an indicator.
+In the future we hope to formalise these rewrite rules based on lambda calculus and prove correct semantics as well, see Chapter~\ref{ch:future-work}.
 
 \begin{figure}
 \begin{minted}{Haskell}
@@ -30,6 +42,7 @@ original = map f
     where f :: a -> b
           f = -- omitted
 
+-- chosen such that: f = after . first fetch . before
 decomposed :: forall a b free. [a] -> [b]
 decomposed = map (after . first fetch . before)
     where before :: a -> (FetchData, free)
@@ -74,17 +87,7 @@ replaced =
 
 \section{Implementation detail}
 
-The simplified explanation above is, albeit a nice and easy example, wrong.
-Unfortunately, although it handles the case above correctly, it does not handle the general case correctly.
-Not every computation is a simple pipeline, like displayed there, and thus could be broken into those three separate functions.
-% A general case could be displayed using a tuple of the data for the fetch and the rest of the flowing data, like so
-% map after . map (first fetch) . map before
-% and then
-% map after . uncurry zip . first (map fetch) . unzip . map before
-We operate not in a normal programming language but on a dataflow graph which, in this case, is more powerful.
-As a consequence we can separate out the fetch, wrap it, like described above, and batch it, even if there is other data flowing from \texttt{before} to \texttt{after} which does not pass through the \fetch{}.
-
-On the dataflow IR we don't work with Clojure functions but with graph nodes, which could also be interpreted as operators.
+On the dataflow IR we don't work with expressions as above but with graph nodes, which could also be interpreted as operators.
 The splitting is therefore not done with maps, but special nodes which start and end a mapping operation in Ohua.
 The Ohua mapping operation is called \texttt{smap} and consists at IR level of several operators, the two interesting ones being \texttt{smap} (internally called \texttt{smap-fun}) and \texttt{collect}.
 \texttt{smap} is the starting operator and provides the mapping functionality by continuously emitting items from a collection until the collection is empty.
@@ -106,10 +109,11 @@ A graphical example of this can be seen in Figure \ref{ch:smap-transformation}.
 \section{Encoding}
 
 The structure of the nested smap is saved in a tree structure.
-We use an unlabeled rose tree\cite{MALCOLM1990255}.
-It is important to use a tree structure because we would like to be able to support arbitrarily deep levels of nesting.
-A rose tree can easily be flattened into a list and be reconstructed into a tree.
-The Java programmer will recognise the Composite Pattern\cite{gamma1995design} in the definition of our tree, which comprises of an abstract tree base class, Figure \ref{fig:tree-impl-base-class}.
+We use a rose tree\cite{MALCOLM1990255} which is only labeled on the leaves.
+This particular tree structure is very flexible both in height and width but restricted to one type of contained item.
+We can therefore support arbitrary deep nestings of \texttt{smaps} (tree height) and arbitrarily large collections to \texttt{smap} over (Number of children $\rightarrow$ tree width) so long as all our items are requests only.
+Our rose tree only holds one type of data and therefore can easily be flattened into a list of data items and later be reconstructed into a tree.
+The Java programmer will recognise the Composite Pattern\cite{gamma1995design} in the definition of our tree, which comprises of an abstract tree base class, Figure \ref{fig:tree-impl-base-class} and two concrete implementations with a branch (Figure~\ref{fig:tree-impl-branch}) and a leaf (Figure~\ref{fig:tree-impl-request-class}).
 
 \begin{figure}
 
@@ -128,11 +132,11 @@ public abstract class RequestTree {
 
 \end{figure}
 
-The basic tree offers methods to access all contained requests as a flat stream as well as a method for constructing a nested tree structure of results mirroring the structure of the request tree itself.
+The basic tree offers methods to access all contained requests as a flat stream as well as a method for constructing a nested tree structure of results mirroring the structure of the request tree.
 Our tree is composed of unlabeled branches which hold a sequence of subtrees as seen in Figure \ref{fig:tree-impl-branch}.
 In this case the flat request stream simply comprises of the concatenation of all requests from the subtrees.
-In this way we don't need any further knowledge of the structure of those subtrees to obtain the requests.
-Although this structure is technically capable of handling a heterogeneous list of subtrees in practice, as a result of how these trees are created all subtrees have the same height and structure.
+We don't need any further knowledge of the structure of those subtrees to obtain the requests here.
+Although this structure is technically capable of handling a heterogeneous list of subtrees, in practice, as a result of how these trees are created sibling branches have the same height and width.
 
 \begin{figure}
 
@@ -192,8 +196,3 @@ public final class Request<P, R>
 \end{figure}
 
 Lastly our leaf nodes are simply requests, as the basic \texttt{Request} also extends the \texttt{RequestTree}, Figure \ref{fig:tree-impl-request-class}.
-
-This rose tree encodes, in a data structure, the nested structure of the smap context.
-The height of the tree equals the depth of smap nesting that was encoded.
-
-% TODO explain why rose tree

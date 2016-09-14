@@ -9,3 +9,17 @@ Rewrite rules as applied by both the context unrolling and the batching transfor
 An aim of future work in this direction, not just from \yauhau{} but the Ohua system in general could be the formulation of a core set of program rewrites, primitives, which are then verified to be correct.
 Subsequently the transformations as described in Chapters~\ref{ch:if-transformation},~\ref{ch:smap-transformation} and~\ref{ch:Yauhau} could be described in those abstract terms and verified to be correct and semantics preserving.
 We have found inspiration for this in a paper ``Generating Performance Portable Code Using Rewrite Rules: From High-level Functional Expressions to High-performance OpenCL Code''\cite{Steuwer:2015:GPP:2858949.2784754}, where formally verified rules are used to decompose and transform high-level functional expressions.
+
+\section{Subgraph batching}
+
+Because the context rewrites introduce so many additional operators for each unwound node it may be beneficial to batch some of those nodes ahead of time to save unwinding nodes.
+The principal approach here is to apply the round detection algorithm to the subgraphs of a context and accumulate many independent, parallel, single fetches into a multi-fetch so then we only have to unwind the fewer multi-fetches and not each individual fetch.
+This subgraph batching could also be used to help \yauhau{} to deal with cyclic graphs, which as of yet do not exist.
+
+\section{Pattern based code generation}
+
+In the process of generating the code for the experiments, especially \ifop{}, it became apparent that it is very desirable to create random code with specific characteristics and patterns.
+In the particular case of the if experiment it would be desirable to create nodes where branches are either precomputed or on the branch.
+Currently this needs to be hardcoded in the generator and switched via a command line parameter.
+For future work there should be a way to define ad hoc patterns for how a node, or perhaps even whole subgraphs matching certain requirements should be serialised.
+Combine this flexibility with a probability for the pattern to be applied and most of what is now a hard coded transformation of graph nodes could be defined with those rules.
