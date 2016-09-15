@@ -131,7 +131,8 @@ natbib=true]{biblatex} % Use the bibtex backend with the authoryear citation sty
 \begin{minipage}[t]{0.4\textwidth}
 \begin{flushright} \large
 \emph{Supervisor:} \\
-\href{http://www.jamessmith.com}{\supname} % Supervisor name - remove the \href bracket to remove the link
+%\href{http://www.jamessmith.com}{\supname} % Supervisor name - remove the \href bracket to remove the link
+\supname
 \end{flushright}
 \end{minipage}\\[3cm]
 
@@ -205,8 +206,15 @@ I will describe issues our dataflow approach introduces into the semantics of wr
 
 \begin{acknowledgements}
 \addchaptertocentry{\acknowledgementname} % Add the acknowledgements to the table of contents
+\emph{- Provisionary -}\\
 
-The acknowledgments and the people to thank go here, don't forget to include your project advisor\ldots
+I would like to thank my coauthors on the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016} for providing a foundation from which to build the contributions of this thesis.
+Andrés Goens for input and critique on both style as well as content of this work.
+
+Jeronimo Castrillon and the Chair for Compiler Construction for a place to work at, resources for my experiments as well as input and inspiration during the lunchtime conversations.
+% I would like to thank my girlfriend for patiently listening to my continued yammering about the many problems which arose during the writing of this thesis.
+
+And lastly and most importantly Sebastian Ertel, my supervisor, for not only reading and critiquing the thesis itself several times but being invaluable help when problems arose and lastly for helping me find and shape this topic in the first place.
 
 \end{acknowledgements}
 
@@ -268,7 +276,7 @@ The acknowledgments and the people to thank go here, don't forget to include you
 %	DEDICATION
 %----------------------------------------------------------------------------------------
 
-\dedicatory{For/Dedicated to/To my\ldots}
+\dedicatory{Dedicated to the fine people at the Chair for Compiler Construction, who introduced me to the world of research and real academia and provided a most inspiring and nurturing environment for me.}
 
 %----------------------------------------------------------------------------------------
 %	THESIS CONTENT - CHAPTERS
