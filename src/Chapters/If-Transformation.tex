@@ -1,5 +1,5 @@
 %!TEX root = ../thesis.tex
-\chapter{If Transformation}
+\chapter{Conditionals Transformation}
 
 \label{ch:if-transformation}
 
@@ -21,7 +21,8 @@ Depending on whether the condition evaluates to \texttt{true} or \texttt{false} 
 The \texttt{select} operator then propagates the result from the activated subgraph to the rest of the program.
 
 \begin{figure}
-    \includegraphics[width=\linewidth]{../Figures/if-in-operators}
+  \includegr{if-in-operators}
+    \includegr{if-in-operators}
     \caption{If represented in operators}
     \label{fig:if-in-operators}
 \end{figure}
@@ -31,51 +32,65 @@ The \texttt{select} operator then propagates the result from the activated subgr
 \subsubsection{In code}
 
 \begin{figure}
-\begin{minted}{Haskell}
-original :: Bool -> a
-original cond =
-    if cond
-        then f
-        else g
+\begin{itemize}
+  \item \texttt{Either a b} encodes a choice of type. It is either inhabited by \texttt{a} (\texttt{Left} constructor) or the type \texttt{b} (\texttt{Right} constructor).
+  \item \texttt{either f g val} is a function which applies one of two functions \texttt{f} or \texttt{g} to the value within an \texttt{Either} (\texttt{val}).
+\end{itemize}
+\caption{Remarks for denotational code}
+\end{figure}
 
-decomposed :: forall a b c => Bool -> a
-decomposed cond =
+
+\begin{figure}
+\begin{minted}{Haskell}
+original :: Bool -> a -> a
+original cond val =
+    if cond
+        then f :: a -> a
+        else g :: a -> a
+
+decomposed :: forall a b c => Bool -> a -> a
+decomposed cond val =
     if cond
         then fAfter . first fetch . fBefore
         else gAfter . first fetch . gBefore
   where
-    fBefore :: (FetchData, b)
+    fBefore :: a -> (FetchData, b)
     fBefore = -- omitted
 
-    fAfter :: (FetchResult, b)
+    fAfter :: (FetchResult, b) -> a
     fAfter = -- omitted
 
-    gBefore :: (FetchData, c)
+    gBefore :: a -> (FetchData, c)
     gBefore = -- omitted
 
-    gAfter :: (FetchResult, c)
+    gAfter :: (FetchResult, c) -> a
     gAfter = -- omitted
 
-splitIf :: forall a b c => Bool -> a
+data Either a b = Left a | Right b
+
+either :: (a -> c) -> (b -> c) -> Either a b -> c
+either f g (Left v) = f v
+either f g (Right v) = g v
+
+splitIf :: forall a b c => Bool -> a -> a
 splitIf cond =
-    ((if cond
-        then fAfter . second fromLeft
-        else gAfter . second fromRight)
-        :: (FetchResult, Either b c) -> a)
+    (either
+      fAfter
+      gAfter
+      :: Either (FetchResult, b) (FetchResult, c) -> a)
+    . liftEither
     . (first fetch
       :: (FetchData, Either b c) -> (FetchResult, Either b c))
     ((if cond
         then second Left . fBefore
         else second Right . gBefore)
-        :: (FetchData, Either b c))
+        :: a -> (FetchData, Either b c))
   where
-    fromLeft :: forall a b => Either a b -> a
-    fromLeft = -- omitted
-
-    fromRight :: forall a b => Either a b -> b
-    fromRight = -- omitted
+    liftEither :: (FetchResult, Either b c)
+               -> Either (FetchResult, b) (FetchResult, c)
+    liftEither (fr, t) = either (Left . (fr,)) (Right . (fr,)) t
 \end{minted}
-\caption{Exemplary if rewrite in Haskell}
+\caption{Denotational conditional rewrite}
 \label{fig:if-rewrite-in-code}
 \end{figure}
 
@@ -89,10 +104,14 @@ In Figure~\ref{fig:if-rewrite-in-code} we can see an exemplary version of this r
 Again the idea is to decompose the original function into a part before and after the \fetch{}, as well as the \fetch{} itself.
 Other data flowing between the before and after functions is packaged into a tuple with \texttt{FetchData} and \texttt{FetchResult} and the fetch is only applied to the data it concerns.
 
-Intermediary we unify this free flowing data into an \texttt{Either} structure which is a sum data type, capable of holding one of of two arbitrary pieces of data since the free data flowing between \texttt{fBefore} $\rightarrow$ \texttt{fAfter} and \texttt{gBefore} $\rightarrow$ \texttt{gAfter} does not have to have the same type.
+Intermediary we unify this free flowing data into an \texttt{Either} structure which is a sum data type, capable of holding one of of two arbitrary pieces of data.
+This is necessary since the free data flowing between \texttt{fBefore} $\rightarrow$ \texttt{fAfter} and \texttt{gBefore} $\rightarrow$ \texttt{gAfter} does not have to have the same type.
+Additionally the choice between the \texttt{Left} and \texttt{Right} constructor of the \texttt{Either} type also encodes our condition.
+If the condition was true, we will have a \texttt{Left} value and if it was false, we will have a \texttt{Right} value.
 
-We later unpack this \texttt{Either} structure again, in a very non-typesafe way using \texttt{fromLeft} and \texttt{fromRight}.
-However we can guarantee that this does not lead to errors because the condition is the same for both \texttt{if} expressions and \fetch{} only modifies the first part of the tuple, becuase of \texttt{first}.
+After the fetch was performed, we pull the Fetch result inside the \texttt{Either} value.
+We can do this, since it requires no knowledge about the structure of the type inside the \texttt{Either}.
+Finally we use the \texttt{either} function to conditionally apply either \texttt{fAfter} or \texttt{gAfter} to this \texttt{Either}.
 
 \subsubsection{As dataflow graph}
 
@@ -103,16 +122,22 @@ After that we wire the result into all places of the rest of \textbf{both} branc
 We insert context arcs from the \texttt{if} operator to those places to make sure they run only if the respective branch was selected.
 Any other data flow between the sections before and after the \texttt{fetch} are left unchanged, see the blue arrows in Figure~\ref{fig:if-trans-before} and \ref{fig:if-trans-merged}.
 
-\begin{figure}
-    \includegraphics[width=\linewidth]{../Figures/if-trans-before}
-    \caption{If transformation source graph}
+\begin{figure}[h]
+  \begin{subfigure}[b]{0.65\textwidth}
+    \includegr{if-trans-before}
+    \caption{Source graph}
     \label{fig:if-trans-before}
-\end{figure}
+  \end{subfigure}
 
-\begin{figure}
-    \includegraphics[width=\linewidth]{../Figures/if-trans-merged}
-    \caption{If transformation after transformation}
-    \label{fig:if-trans-merged}
+  \begin{subfigure}[b]{.35\textwidth}
+    \includegr{if-trans-legend}
+  \end{subfigure}
+
+  \begin{subfigure}{\textwidth}
+    \includegr{if-trans-merged}
+      \caption{Graph after transformation}
+      \label{fig:if-trans-merged}
+  \end{subfigure}
 \end{figure}
 
 \subsection{Fetch imbalance}
@@ -121,12 +146,6 @@ We previously assumed that both branches held an equal number of fetches and tha
 However in real programs this may not be the case at all, see Figure \ref{fig:if-insert-empty-parallel-before}.
 There is a simple solution to this problem.
 We solve the imbalance of fetches by inserting empty (NoOp) fetches at the front of the branch with fewer fetches, see Figure~\ref{fig:if-insert-empty-parallel-after}.
-
-\begin{figure}
-    \includegraphics[width=\linewidth]{../Figures/if-insert-empty-parallel-before}
-    \caption{Graph of a graph with imbalanced fetches in conditional}
-    \label{fig:if-insert-empty-parallel-before}
-\end{figure}
 
 Originally I would create the empty fetches by collecting an graph of fetches and data dependencies between them on each branch.
 From this I obtained a topologically sorted list of fetches.
@@ -142,11 +161,25 @@ This operator would not get input at all, except for a context arc from the \tex
 The second request-fetch pair would receive as input the result from the first fetch and the third one the result from the second and so on.
 The final result was discarded.
 
-\begin{figure}
-    \includegraphics[width=\linewidth]{../Figures/if-insert-empty-parallel-after-insert}
-    \caption{Insertion of empty requests and fetches}
-    \label{fig:if-insert-empty-parallel-after}
+\begin{figure}[h]
+  \begin{subfigure}{\textwidth}
+    \includegr{if-insert-empty-parallel-before}
+      \caption{Graph of a graph with imbalanced fetches in conditional}
+      \label{fig:if-insert-empty-parallel-before}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.5\textwidth}
+    \includegr{if-insert-empty-parallel-after-insert}
+      \caption{Insertion of empty requests and fetches}
+      \label{fig:if-insert-empty-parallel-after}
+  \end{subfigure}
+  \begin{subfigure}[b]{.5\textwidth}
+    \includegr{if-insert-empty-better-after-insert}
+      \caption{Better approach to empty requests and fetches}
+      \label{if-insert-empty-better-after-insert}
+  \end{subfigure}
+  \caption{Two approaches to inserting empty fetches}
 \end{figure}
+
 
 There is a significant problem with this approach, which is, and I only realised this late, that this created sequence is fully dependent.
 Meaning each fetch depends on \textbf{all} of its predecessor fetches.
@@ -158,7 +191,6 @@ In the the second branch each fetch was dependent on all previous fetches in the
 And since this is true for all fetches in the branch each of those will be in a separate round.
 They can still be batched with other, parallel parts of the program, however we have lost the opportunity for some batching here, because we have forced sequentiality, even if it may not have existed originally.
 
-
 There is a very simple solution to this problem, which, coincidentally, also simplified the implementation of the algorithm as a whole.
 Now I only generate a single operator called \texttt{mk-empty-req} which creates one empty request, with no dependency other than the \texttt{if} operator.
 Note that the \texttt{mk-empty-req} implementation changed as well to combine the functionality of \texttt{const-null} and the old \texttt{mk-empty-req}.
@@ -167,10 +199,6 @@ Therefore we only create one request, which reduces the number of operators, and
 Therefore they could in theory all be batched.
 If we now merge the branches our empty requests will create no new dependencies, since they have the least dependency possible in the branch.
 
-\begin{figure}
-    \includegraphics[width=\linewidth]{../Figures/if-insert-empty-better-after-insert}
-    \caption{Better approach to empty requests and fetches}
-    \label{if-insert-empty-better-after-insert}
-\end{figure}
+
 
 Now we can apply the merge transformation as described before.

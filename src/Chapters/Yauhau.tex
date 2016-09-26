@@ -15,14 +15,14 @@ The precise nature of this context information will be explained in section \ref
 It is irrelevant to the basic \yauhau{} idea and transformation.
 
 Fundamentally \yauhau{} performs a graph transformation on the dataflow graph it has been given in form of the IR.
-The goal behind this transformation is to find sets of IO operations which are data independent from each other.
+The goal behind this transformation is to find sets of I/O operations which are data independent from each other.
 This is functionally similar to the approach taken by Haxl\cite{Haxl:library:link}, see Chapter~\ref{ch:related-work}.
-Haxl leverages the Monad and Applicative abstractions provided by the Haskell language and base library to propagate a list of parallel executable IO actions through the program path, blocking each path as soon as an IO action is encountered.
-This is a dynamic way of finding parallel IO actions, i.e. at runtime a data structure (Data.Sequence.Seq) is populated with pending requests.
-\yauhau{} takes a different approach and statically finds parallel IO actions at compile time.
+Haxl leverages the Monad and Applicative abstractions provided by the Haskell language and base library to propagate a list of parallel executable I/O actions through the program path, blocking each path as soon as an I/O action is encountered.
+This is a dynamic way of finding parallel I/O actions, i.e. at runtime a data structure (Data.Sequence.Seq) is populated with pending requests.
+\yauhau{} takes a different approach and statically finds parallel I/O actions at compile time.
 
 \begin{figure}
-    \includegraphics[width=\linewidth]{../Figures/yauhau-rewrite-flow}
+    \includegraphics[width=\textwidth]{../Figures/yauhau-rewrite-flow}
     \caption{Rewrite order and flow in \yauhau{}}
     \label{fig:yauhau-rewrite-flow}
 \end{figure}
@@ -53,7 +53,7 @@ This means once a certain data source returns with the data, computations only d
 Similar to Haxl, compare Section~\ref{subs:datasources}, all data sources a user wants to access in \yauhau{} must be defined externally.
 
 \yauhau{} has a more loose way of working with data sources than Haxl.
-IO actions in \yauhau{} are instances of the \texttt{Request} class.
+I/O actions in \yauhau{} are instances of the \texttt{Request} class.
 
 \begin{figure}[h]
 \begin{minted}{Java}
@@ -121,7 +121,7 @@ Hence the round detection finds a minimal set of non overlapping sets of data in
 \subsubsection{Algorithm description}
 
 After much consideration I decided to go for a very similar approach to Haxl by simulating running the graph and blocking code paths when a \texttt{fetch} node is encountered.
-Simulating the execution of the program is done by topologically visiting the nodes o the graph while tracking three sets of items.
+Simulating the execution of the program is done by topologically visiting the nodes of the graph while tracking three sets of items.
 
 \begin{description}
 	\item[created] The set of created bindings tracks which pieces of data that flow between the nodes of the program have been created prior to a particular point in the program.
@@ -141,13 +141,13 @@ Once the stage has been computed all functions in the stage are added to the \em
 Then all \fetch{} nodes are filtered from the stage and added to the current \emph{round}.
 All remaining nodes are being executed.
 Simulating to executing the nodes is done by simply adding all produced bindings (return bindings) of the node to the \emph{created} set.
-If there are no remaining nodes to execute in a stage we have reached a point where the remainder of the dataflow graph depends on IO actions, including the \fetch{} nodes.
+If there are no remaining nodes to execute in a stage we have reached a point where the remainder of the dataflow graph depends on I/O actions, including the \fetch{} nodes.
 Therefore the current round is maximal and we simulate executing all \texttt{fetch} nodes of the current round and dispatch a finalised fetch round.
 Afterwards the current \emph{round} set is initialised empty again.
 This is done until we get an empty stage, at which point we dispatch the current round again, unless it is empty, and we have reached the end of the round detection.
 
 \begin{figure}
-    \includegraphics[width=\linewidth]{../Figures/yauhau-round-detection}
+    \includegraphics[width=\textwidth]{yauhau-round-detection}
     \caption{Example of the round detection algorithm}
     \label{fig:yauhau-round-detection}
 \end{figure}
@@ -228,7 +228,7 @@ For each round all fetch nodes in the round are removed from the graph.
 An accumulator is inserted with the combined inputs of all fetch nodes and the combined outputs of those nodes in the same order. See Figure \ref{fig:yauhau-transformation}.
 
 \begin{figure}{h}
-    \includegraphics[width=\textwidth]{Figures/yauhau-transformation}
+    \includegr{yauhau-transformation}
 	\caption{Base transformation (taken from our paper\cite{ErtelGoensAdamEtAl2016})}
 	\label{fig:yauhau-transformation}
 \end{figure}
@@ -283,7 +283,7 @@ When a collection, which is longer than 1 is given to smap the respective input 
 At the same time the topmost two inputs comes from inside an if which means that only \textbf{one} of those two accumulator inputs would receive data during any execution of this program snippet, whereas the other receives nothing.
 
 \begin{figure}
-    \includegraphics[width=\textwidth]{../Figures/naive-transformation}
+    \includegr{naive-transformation}
 	\caption{Naive batching}
 	\label{fig:naive-batching-context-problem}
 \end{figure}

@@ -1,7 +1,19 @@
 %!TEX root = ../thesis.tex
-\chapter{Future Work}
+\chapter{Conclusion and Future Work}
 
 \label{ch:future-work}
+
+With the introduction of contexts and exploration of their properties I was able to create a generalised and extensible unifying context unwinding algorithm for preparing graphs for the \yauhau{} transformation.
+Should a new context structure be added to Ohua the unified unwinding algorithm can be extended by providing a rewrite for only level of the new context.
+
+A new graph rewrite for automatically introducing necessary \texttt{seq} operators into a program with side effects allows \yauhau{} programs with intuitive side effects in the form of writes to a datasource.
+
+Code generator extensions enable new experiments, which show how \yauhau{} delivers comparable, if not better, performance compared to the similar system Haxl while allowing modularity.
+
+An evaluation of the effect of precomputing branches of conditionals lays a foundation for perhaps future optimisations by the compiler.
+Precomputing conditional branches can noticeably decrease the number of performed rounds in a program and thus potentially significantly decrease overall execution time.
+However an implementation would require a sophisticated selection algorithm for finding sites where this optimisation is beneficial.
+
 
 \section{Formalised rewrite rules}
 

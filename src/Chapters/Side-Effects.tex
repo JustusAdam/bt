@@ -22,7 +22,7 @@ When the user defines a cache he can also provide a function for how to manipula
 Two simple predefined actions are available by default \texttt{dropOne} and \texttt{dropAll}.
 The former drops a request from the cache matching the current one and the latter clears the entire cache.
 
-\begin{figure}
+\begin{figure}[h]
 \begin{minted}{Java}
 /* Caches should implement both interfaces */
 public interface Dropable<A> {
@@ -56,7 +56,7 @@ The inspiration for this operator comes from Haskell, which has a function calle
 Whereas Haskell's \texttt{seq} only guarantees that then it returns its second arguments both arguments have been evaluated to WHNF, Ohua's \texttt{seq} guarantees that \emph{before} the latter argument is being evaluated the first has been \emph{fully} evaluated.
 In the example Figure~\ref{fig:enforcing-order-with-seq} we enforce the write to happen first using seq.
 
-\begin{figure}
+\begin{figure}[h]
 \begingroup
 \definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
 \catcode`\@=\active
@@ -72,7 +72,8 @@ In the example Figure~\ref{fig:enforcing-order-with-seq} we enforce the write to
 \label{fig:independent-actions-code}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[h]
+  \begin{subfigure}{\textwidth}
 \begingroup
 \definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
 \catcode`\@=\active
@@ -86,9 +87,8 @@ In the example Figure~\ref{fig:enforcing-order-with-seq} we enforce the write to
 \endgroup
 \caption{Enforcing order using seq}
 \label{fig:enforcing-order-with-seq}
-\end{figure}
-
-\begin{figure}
+\end{subfigure}
+\begin{subfigure}{\textwidth}
 \begingroup
 \definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
 \catcode`\@=\active
@@ -100,6 +100,7 @@ In the example Figure~\ref{fig:enforcing-order-with-seq} we enforce the write to
 \endgroup
 \caption{Enforcing order with data dependencies}
 \label{fig:enforcing-order-with-dd}
+\end{subfigure}
 \end{figure}
 
 We could also achieve the same semantics by introducing data dependencies between the two function calls as seen in Figure~\ref{fig:enforcing-order-with-dd}.

@@ -6,31 +6,32 @@
 
 % TODO the intro is a bit twisted: normally an intro goes by this structure: problem, missing solutions, contributions, outline (I like it when the last two are co-mingled.)
 
-In the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016}, authored by Sebastian Ertel, Andrés Goens, Jeronimo Castrillon and myself, \yauhau{}, a plugin for the Ohua\cite{Ertel:2015:OID:2807426.2807431}\cite{Ohua:library:link} compiler, was introduced.
-\yauhau{} rewrites a program to achieve efficient IO whilst allowing the programmer to write very concise and straight forward code.
+In the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from\-Dataflow.''\cite{ErtelGoensAdamEtAl2016}, authored by Sebastian Ertel, Andrés Goens, Jeronimo Castrillon and myself, \yauhau{}, a plugin for the Ohua\cite{Ertel:2015:OID:2807426.2807431}\cite{Ohua:library:link} compiler, was introduced.
+\yauhau{} rewrites a program to achieve efficient I/O whilst allowing the programmer to write very concise and straight forward code.
 It is inspired by a similar system called Haxl, see Chapter~\ref{ch:related-work}.
-In the paper we explained the basic idea of finding data independent, reading IO actions, combining them into batched requests, caching them as well as executing them concurrently.
-Because of our compile time transformation model however \yauhau{} faces challenges when confronted with control flow structures such as \texttt{if} and iteration in the form of a mapping operation called \texttt{smap}.
-Much headway in solving these challenges was made in the paper itself, but a generalisation of handling control flow is needed.
+In the paper we explained the basic idea of finding data independent, reading I/O actions, combining them into batched requests, caching them as well as executing them concurrently.
 
-Also introduced in the paper is the notion of a mutative IO action in the form of \texttt{write} requests.
-We already explained how we ensure results of mutative actions are visible to the \texttt{read} requests in the presence of a cache, however there is still more semantic consistency to be desired between \texttt{read} and \texttt{write} requests.
-Namely that when algorithm\footnote{An ``algorithm'' is like a function in the Ohua framework, see Chapter~\ref{ch:Ohua}.} $a$ depends on the result of running algorithm $b$, all reads and writes in $b$ should be performed before reads or writes in $a$ are performed.
-This is currently not guaranteed but we would consider it expected behaviour.
+\section{Contributions}
 
-In this thesis I want to explain in much more detail the concrete ways in which I handle control flow in \yauhau{} and explain implementation considerations.
-Chapter~\ref{ch:smap-transformation} therefore concerns itself with iteration (\texttt{smap}) and Chapter~\ref{ch:if-transformation} explains in more detail the handling of conditionals (\texttt{if}).
+\begin{enumerate}
+    \item Because of our compile time transformation model \yauhau{} faces challenges when confronted with control flow structures such as \texttt{if} and iteration in the form of a mapping operation called \texttt{smap}.
+    The basic implementation of these rewrites was done already for the paper, however no detailed description has yet been provided due to constraints for content length.
+    Therefore this thesis provides such a detailed description, including implementation considerations and decisions, of the \textbf{if and smap transformations}.
+    \item Born of the necessity to handle nested \texttt{smap}s and \texttt{if}s in our rewrites I present a generalisation of non structurally emergent dataflow graph properties into a concept called \textbf{Context}.
+    Contexts are a broader concept which transcends the scope of only the control flow structures \texttt{if} and \texttt{smap} and is now a part of the Ohua framework.
+    In this thesis I will define contexts, describe general properties, how it is detected and how it is used to handle nested control flow in \yauhau{}.
+    \item The aforementioned paper also introduces the notion of a mutative I/O action in the form of \texttt{write} requests.
+    We already explained how we ensure results of mutative actions are visible to the \texttt{read} requests in the presence of a cache, however there is still more semantic consistency to be desired between \texttt{read} and \texttt{write} requests.
+    Namely that when algorithm\footnote{An ``algorithm'' is like a function in the Ohua framework, see Chapter~\ref{ch:Ohua}.} $a$ depends on the result of running algorithm $b$, all reads and writes in $b$ should be performed before reads or writes in $a$ are performed.
+    I provide an optional graph transformation in \yauhau{} used to \textbf{preserve write semantics} in programs using the \yauhau{} batching.
+    \item \textbf{Extensions to the random code generator}~\cite{Goens-rand-code-graph} used in the \yauhau{} paper to generate test programs.
+    These extenstions enable \textbf{support for mapping operations} as well as different \textbf{generation methods for conditionals} in the code generator.
+    \item Using the new extensions we can generate programs with certain properties, namely a certain percentage of map applications and/or conditional nodes.
+    As a result I can now show new \textbf{experiments} comparing the performance of the \yauhau{} plugin to the existing technology Haxl in \textbf{programs with conditionals and mapping}.
+    \item Lastly I explore the possibility of \textbf{optimising programs for faster I/O by precomputing branches} of a conditional (\texttt{if}).
+    I show experimental comparisons of the number of performed rounds and fetches in programs with both precomputed and non-precomputed conditionals.
+\end{enumerate}
 
-I also want to introduce the reader to a new generalised concept, called context (Chapter~\ref{ch:Context}), which has now been added to Ohua and allows, among other things, the correct handling of nested control flow structures.
-
-After that in Chapter~\ref{ch:trans-implementation} I will describe some general implementation decisions for \yauhau{} and necessary optimisations following from some of those.
-
-In Chapter~~\ref{ch:side-effects} I will move onto the semantically correct handling of side effects and how this is ensured by \yauhau{}.
-This chapter introduces the concept of controlled side effects in a functional and parallel system such as Ohua by means of the \yauhau{} plugin and how we intend to preserve semantics with regards to caching as well as read-write conflicts, whilst enabling easy and straight forward modularity.
-
-At the beginning however I want to first provide some background by introducing the reader to the underlying Ohua framework (Chapter~\ref{ch:Ohua}) and the basics of the \yauhau{} plugin (Chapter~\ref{ch:Yauhau}), the latter of which includes a description of the basic IO batching transformation.
-%
-% Contributions of this thesis are:
 % \begin{itemize}
 %     \item A more detailed description, including implementation considerations and decisions, of the \textbf{if and smap transformations}.
 %     \item The generalisation of non structurally emergent dataflow graph properties into a concept called \textbf{Context}, its detection and use to handle nested control flow in \yauhau{}.

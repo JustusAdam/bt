@@ -23,7 +23,7 @@
 %----------------------------------------------------------------------------------------
 
 \documentclass[
-11pt, % The default document font size, options: 10pt, 11pt, 12pt
+10pt, % The default document font size, options: 10pt, 11pt, 12pt
 %oneside, % Two side (alternating margins) for binding by default, uncomment to switch to one side
 %chapterinoneline,% Have the chapter title next to the number in one single line
 english, % ngerman for German
@@ -46,6 +46,8 @@ headsepline, % Uncomment to get a line under the header
 
 %\usepackage[cache=false,outputdir=.texpadtmp]{minted}
 \usepackage{minted}
+
+\usepackage{subcaption}
 
 \usepackage{mathtools}
 \usepackage[ruled,vlined,commentsnumbered]{algorithm2e}
@@ -101,6 +103,7 @@ natbib=true]{biblatex} % Use the bibtex backend with the authoryear citation sty
 \newcommand{\yauhau}{Ÿauhau}
 \newcommand{\smap}{\texttt{smap}}
 \newcommand{\ifop}{\texttt{if}}
+\newcommand{\includegr}[1]{\includegraphics[scale=0.3]{../Figures/#1}}
 
 \begin{document}
 
@@ -204,19 +207,19 @@ I will describe issues our dataflow approach introduces into the semantics of wr
 %	ACKNOWLEDGEMENTS
 %----------------------------------------------------------------------------------------
 
-\begin{acknowledgements}
-\addchaptertocentry{\acknowledgementname} % Add the acknowledgements to the table of contents
-\emph{- Provisionary -}\\
-
-I would like to thank my coauthors on the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016} for providing a foundation from which to build the contributions of this thesis.
-Andrés Goens for input and critique on both style as well as content of this work.
-
-Jeronimo Castrillon and the Chair for Compiler Construction for a place to work at, resources for my experiments as well as input and inspiration during the lunchtime conversations.
-% I would like to thank my girlfriend for patiently listening to my continued yammering about the many problems which arose during the writing of this thesis.
-
-And lastly and most importantly Sebastian Ertel, my supervisor, for not only reading and critiquing the thesis itself several times but being invaluable help when problems arose and lastly for helping me find and shape this topic in the first place.
-
-\end{acknowledgements}
+% \begin{acknowledgements}
+% \addchaptertocentry{\acknowledgementname} % Add the acknowledgements to the table of contents
+% \emph{- Provisionary -}\\
+%
+% I would like to thank my coauthors on the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016} for providing a foundation from which to build the contributions of this thesis.
+% Andrés Goens for input and critique on both style as well as content of this work.
+%
+% Jeronimo Castrillon and the Chair for Compiler Construction for a place to work at, resources for my experiments as well as input and inspiration during the lunchtime conversations.
+% % I would like to thank my girlfriend for patiently listening to my continued yammering about the many problems which arose during the writing of this thesis.
+%
+% And lastly and most importantly Sebastian Ertel, my supervisor, for not only reading and critiquing the thesis itself several times but being invaluable help when problems arose and lastly for helping me find and shape this topic in the first place.
+%
+% \end{acknowledgements}
 
 %----------------------------------------------------------------------------------------
 %	LIST OF CONTENTS/FIGURES/TABLES PAGES
@@ -224,7 +227,7 @@ And lastly and most importantly Sebastian Ertel, my supervisor, for not only rea
 
 \tableofcontents % Prints the main table of contents
 
-% \listoffigures % Prints the list of figures
+\listoffigures % Prints the list of figures
 %
 % \listoftables % Prints the list of tables
 
@@ -232,16 +235,16 @@ And lastly and most importantly Sebastian Ertel, my supervisor, for not only rea
 %	ABBREVIATIONS
 %----------------------------------------------------------------------------------------
 
-\begin{abbreviations}{ll} % Include a list of abbreviations (a table of two columns)
-
-\textbf{IO} & \textbf{I}nput/\textbf{O}utput\\
-\textbf{IR} & \textbf{I}ntermediate \textbf{R}epresentation (of a program)\\
-\textbf{DLS} & \textbf{D}omain \textbf{S}pecific \textbf{L}anguage\\
-\textbf{EDLS} & \textbf{E}mbedded \textbf{D}omain \textbf{S}pecific \textbf{L}anguage\\
-\textbf{DAG} & \textbf{D}irected \textbf{A}cyclic \textbf{G}raph\\
-\textbf{WHNF} & \textbf{W}eak \textbf{H}ead \textbf{N}ormal \textbf{Form}\\
-
-\end{abbreviations}
+% \begin{abbreviations}{ll} % Include a list of abbreviations (a table of two columns)
+%
+% \textbf{IO} & \textbf{I}nput/\textbf{O}utput\\
+% \textbf{IR} & \textbf{I}ntermediate \textbf{R}epresentation (of a program)\\
+% \textbf{DLS} & \textbf{D}omain \textbf{S}pecific \textbf{L}anguage\\
+% \textbf{EDLS} & \textbf{E}mbedded \textbf{D}omain \textbf{S}pecific \textbf{L}anguage\\
+% \textbf{DAG} & \textbf{D}irected \textbf{A}cyclic \textbf{G}raph\\
+% \textbf{WHNF} & \textbf{W}eak \textbf{H}ead \textbf{N}ormal \textbf{Form}\\
+%
+% \end{abbreviations}
 
 %----------------------------------------------------------------------------------------
 %	PHYSICAL CONSTANTS/OTHER DEFINITIONS
@@ -276,7 +279,7 @@ And lastly and most importantly Sebastian Ertel, my supervisor, for not only rea
 %	DEDICATION
 %----------------------------------------------------------------------------------------
 
-\dedicatory{Dedicated to the fine people at the Chair for Compiler Construction, who introduced me to the world of research and real academia and provided a most inspiring and nurturing environment for me.}
+% \dedicatory{Dedicated to the fine people at the Chair for Compiler Construction, who introduced me to the world of research and real academia and provided a most inspiring and nurturing environment for me.}
 
 %----------------------------------------------------------------------------------------
 %	THESIS CONTENT - CHAPTERS

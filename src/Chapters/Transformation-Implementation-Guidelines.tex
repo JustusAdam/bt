@@ -65,21 +65,23 @@ This optimisation removes those kinds of identities.
 Specifically if the output of an identity operator is not destructured then there is no need for it, hence it can be removed and each occurrence of the return binding is replaced by the input binding and a potential context arc is connected to the recipient as well, see Figure~\ref{fig:redundant-identity-example-rewritten}.
 
 \begin{figure}
-    \includegraphics[width=\linewidth]{../Figures/identity-example}
+    \includegr{identity-example}
     \caption{Identity use example}
     \label{fig:identity-example}
 \end{figure}
 
 \begin{figure}
-    \includegraphics[width=\linewidth]{../Figures/redundant-identity-example}
-    \caption{Redundant identity example}
-    \label{fig:redundant-identity-example}
-\end{figure}
+    \begin{subfigure}[b]{.5\textwidth}
+        \includegr{redundant-identity-example}
+        \caption{Redundant identity example}
+        \label{fig:redundant-identity-example}
+    \end{subfigure}
+    \begin{subfigure}[b]{.5\textwidth}
+        \includegr{redundant-identity-example-rewritten}
+        \caption{Optimised flow}
+        \label{fig:redundant-identity-example-rewritten}
+    \end{subfigure}
 
-\begin{figure}
-    \includegraphics[width=\linewidth]{../Figures/redundant-identity-example-rewritten}
-    \caption{Optimised flow}
-    \label{fig:redundant-identity-example-rewritten}
 \end{figure}
 
 A second \texttt{identity} optimisation is the removal of duplicate identities.

@@ -64,14 +64,14 @@ main =
 
 Muse\cite{Muse:repository:link} is a Clojure implementation of Haxl.
 Like Haxl the data access actions are defined with functors.
-This functor is a free monad which builds an AST of the program.
+This functor is a free monad\cite{free-monad} which builds an AST of the program.
 A runtime traverses that AST, finds parallel rounds of fetches and executes the code, batching the fetch operations.
 
 \subsection{Datasources}
 
 \label{subs:datasources}
 
-Datasources can be arbitrary user defined targets for IO actions such as databases, network requests or filesystem IO.
+Datasources can be arbitrary user defined targets for I/O actions such as databases, network requests or filesystem I/O.
 However datasources must be defined separately and only for those defined datasources the optimisation can be leveraged.
 
 Defining a datasource in Haxl means defining a set of actions on the source in form of a GADT\cite{PeytonJones:2006:SUT:1160074.1159811}, see Figure~\ref{fig:defining-requests-in-haxl} .
@@ -90,10 +90,10 @@ data FacebookRequest a where
 Every time you want to make a request in the program it has to be encoded into one of those actions.
 A Haxl function by the name of \texttt{dataFetch} can be called with an encoded request to schedule its execution.
 
-The actual execution of the IO action is defined in a typeclass called \texttt{DataSource} which has to be defined on the request GADT, see Figure~\ref{fig:defining-datsource-in-haxl}.
-The \texttt{DataSource} typeclass has a method called \texttt{fetch} which does the actual work of performing the desired IO action and is user defined.
+The actual execution of the I/O action is defined in a typeclass\cite{type-classes} called \texttt{DataSource} which has to be defined on the request GADT, see Figure~\ref{fig:defining-datsource-in-haxl}.
+The \texttt{DataSource} typeclass has a method called \texttt{fetch} which does the actual work of performing the desired I/O action and is user defined.
 Even though it allows arbitrary side effects due to the fact that Haxl caches results it is strongly recommended not to mutate the data source but only retrieve data.
-As its type signature \texttt{fetch} method indicates, see  Figure~\ref{fig:defining-datsource-in-haxl}, it perfoerms multiple requests simultaneously and this is where the batching happens.
+As its type signature \texttt{fetch} method indicates, see  Figure~\ref{fig:defining-datsource-in-haxl}, it performs multiple requests simultaneously and this is where the batching happens.
 The user defines how exactly these requests are batched, Haxl only concerns itself with finding requests that can be batched.
 
 Additionally, for the cache, the \texttt{Hashable} typeclass needs to be implemented on this type as well as the \texttt{DataSourceName} and \texttt{StateKey} typeclass to identify the source.
@@ -163,6 +163,6 @@ invalid = do
 
 \subsection{Muse}
 
-Muse is more loose with its allowance of side effects, because in Clojure there is no type system which could be used to restrict IO.
+Muse is more loose with its allowance of side effects, because in Clojure there is no type system which could be used to restrict I/O.
 However it also caches previous requests and therefore the effects of mutating the data source are not reflected in future, cached fetches.
 As a result muse also strongly recommends not to mutate the data source.

@@ -19,6 +19,9 @@ import           Text.Printf
 import Statistics.Sample (stdDev, Sample)
 
 
+plotsFontSize = 20
+
+
 readDecOrFail :: FromJSON a => FilePath -> Action a
 readDecOrFail file =
     either (error . printf "Error in file %v: %v" file) id . eitherDecode <$> readFile file
@@ -66,11 +69,15 @@ readData sourceData = do
 renderWithDefaultStyle :: (Default (Layout a b), ToRenderable (Layout a b), MonadIO m) => FilePath -> EC (Layout a b) () -> m ()
 renderWithDefaultStyle filename inner =
       void $ liftIO $ toFile (def & fo_format .~ EPS & fo_size .~ (800, 400)) filename $ do
-          layout_x_axis . laxis_title_style . font_size .= 15.0
+          layout_x_axis . laxis_title_style . font_size .= plotsFontSize
           layout_x_axis . laxis_style . axis_label_gap .= 10.0
-          layout_y_axis . laxis_title_style . font_size .= 15.0
+          layout_x_axis . laxis_style . axis_label_style . font_size .= plotsFontSize
+          layout_y_axis . laxis_title_style . font_size .= plotsFontSize
+          layout_y_axis . laxis_style . axis_label_style . font_size .= plotsFontSize
           layout_y_axis . laxis_style . axis_label_gap .= 10.0
           layout_margin .= 30
+
+          layout_legend %= fmap ((legend_label_style . font_size .~ plotsFontSize) . (legend_plot_size .~ 1))
           inner
 --    void $ liftIO $ cBackendToFile (def & fo_format .~ EPS) (withScaleY 0.5 $ toRenderable $ execEC inner) filename
 
@@ -78,16 +85,18 @@ renderWithDefaultStyle filename inner =
 plotAll :: [(String, [(a, b)])] -> EC (Layout a b) ()
 plotAll values = do
     setShapes [PointShapeCircle, PointShapeArrowHead 1, PointShapeCross]
-    for_ values $ \(name, data_) -> do
+    let linestyles = let x = [[1], [1, 1], [0.5, 0.5]] in x ++ linestyles
+    for_ (zip values linestyles) $ \((name, data_), linestyle) -> do
 
         color <- takeColor
         shape <- takeShape
         plot $ liftEC $ do
-            plot_lines_title .= name
             plot_lines_values .= [data_]
             plot_lines_style . line_color .= color
+            plot_lines_style . line_dashes .= linestyle
         plot $ liftEC $ do
             plot_points_values .= data_
+            plot_points_title .= name
             plot_points_style . point_color .= color
             plot_points_style . point_shape .= shape
             plot_points_style . point_radius .= 4
@@ -152,8 +161,8 @@ smapPrimer filename = do
     let groupedAndSorted = map (second $ percentagesToRounds prctFuns) values
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Number of levels in the graph"
-        layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
+        layout_x_axis . laxis_title .= "# levels"
+        layout_y_axis . laxis_title .= "# fetch rounds"
         plotAll groupedAndSorted
 
 
@@ -168,8 +177,8 @@ vanillaExperiment filename = do
     let groupedAndSorted = map (second $ percentagesToRounds prctFuns) values
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Number of levels in the graph"
-        layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
+        layout_x_axis . laxis_title .= "# levels"
+        layout_y_axis . laxis_title .= "# fetch rounds"
         plotAll groupedAndSorted
 
 
@@ -189,9 +198,12 @@ smapExperiment filename = do
         processedNoMaps = percentagesToRounds prctMaps noMaps
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Probability of mapping nodes during generation"
-        layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
-        plotAll [("Haxl", processedHaxl), ("Yauhau", processedYauhau), ("No maps (Yauhau)", processedNoMaps)]
+        layout_x_axis . laxis_title .= "probablility of maps"
+        layout_y_axis . laxis_title .= "# fetch rounds"
+        plotAll [ ("Haxl", processedHaxl)
+                , ("Yauhau", processedYauhau)
+                -- , ("No maps (Yauhau)", processedNoMaps)
+                ]
 
 
 ifExperiment filename = do
@@ -204,8 +216,9 @@ ifExperiment filename = do
             & map (second prepare)
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Probability of conditional nodes"
-        layout_y_axis . laxis_title .= "Round difference (absolute)"
+        layout_x_axis . laxis_title .= "probability of conditionals"
+        layout_y_axis . laxis_title .= "round difference (absolute)"
+        layout_legend .= Nothing
         plotErrBarsMinMax [("Difference", grouped)]
     where
         prepare :: [MeasuredGraph] -> [Double]
@@ -224,7 +237,7 @@ ifExperimentPrct filename = do
             & map (second prepare)
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Probability of conditional nodes"
+        layout_x_axis . laxis_title .= "Probability of conditionals"
         layout_y_axis . laxis_title .= "Round difference (%)"
         plotErrBarsMinMax [("Difference", grouped)]
     where
@@ -242,8 +255,8 @@ ifExperimentFetches filename = do
     let groupedAndSorted = map (second $ percentagesToSelected fetches prctIfs) values
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Probability of conditional nodes"
-        layout_y_axis . laxis_title .= "Number of fetches performed"
+        layout_x_axis . laxis_title .= "probability of conditionals"
+        layout_y_axis . laxis_title .= "# fetches"
         plotErrBars groupedAndSorted
 
 
@@ -255,8 +268,8 @@ ifExperimentExecTime filename = do
     let groupedAndSorted = map (second $ percentagesToSelected time prctIfs) values
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Probability of conditional nodes"
-        layout_y_axis . laxis_title .= "Program execution time"
+        layout_x_axis . laxis_title .= "probability of conditionals"
+        layout_y_axis . laxis_title .= "exec time"
         plotErrBars groupedAndSorted
 
 
@@ -268,8 +281,8 @@ ifExperimentDelayed filename = do
     let groupedAndSorted = map (second $ percentagesToSelected time prctSlow) values
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Probability of slow data fetches"
-        layout_y_axis . laxis_title .= "Program execution time"
+        layout_x_axis . laxis_title .= "probability of slow fetches"
+        layout_y_axis . laxis_title .= "exec time"
         plotErrBars groupedAndSorted
 
 funcExperimentSource =
@@ -283,8 +296,8 @@ funcExperiment filename = do
     let groupedAndSorted = map (second $ percentagesToRounds prctFuns) values
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Probability of function nodes during generation"
-        layout_y_axis . laxis_title .= "Number of Fetch rounds performed/accumulators inserted"
+        layout_x_axis . laxis_title .= "probability of functions"
+        layout_y_axis . laxis_title .= "# fetch rounds"
         plotAll groupedAndSorted
 
 
@@ -317,6 +330,7 @@ figures =
     , "if-insert-empty-parallel-before.pdf"
     , "if-trans-before.pdf"
     , "if-trans-merged.pdf"
+    , "if-trans-legend.pdf"
     , "naive-transformation.pdf"
     , "ohua-compiler-flow-with-ctx.pdf"
     , "ohua-compiler-flow.pdf"

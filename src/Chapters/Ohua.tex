@@ -5,8 +5,17 @@
 
 Ohua\cite{Ertel:2015:OID:2807426.2807431}\cite{Ohua:library:link} is parallelisation framework implemented in Java\cite{JavaLanguage} and Clojure\cite{ClojureLanguage}.
 
-At compile time Ohua transforms the program into a dataflow graph.
-This graph is a representation of some atomic parts of the program and the data dependencies between them.
+At compile time Ohua transforms the program into a dataflow graph, see Figure~\ref{fig:ohua-compiler-flow}.
+The program itself is written in a Clojure EDSL, input in the lower part of Figure~\ref{fig:ohua-compiler-flow} and composes of so called ``stateful functions''\ref{sec:stateful-functions}, input in the upper part of Figure~\ref{fig:ohua-compiler-flow}.
+
+\begin{figure}
+  \includegraphics[width=\textwidth]{../Figures/ohua-compiler-flow}
+  \caption{Compiler flow of Ohua}
+  \label{fig:ohua-compiler-flow}
+\end{figure}
+
+
+The created dataflow graph is a representation of atomic parts of the program, the stateful functions, and the data dependencies between them.
 Since Ohua currently does not support recursion this graph is a DAG.
 Nodes are call sites of atomic pieces of code, these pieces of code are called stateful functions.
 Edges represent data dependencies between the call sites.
@@ -17,6 +26,7 @@ An example of how this transformation looks can be seen in Figure~\ref{fig:ohua-
 All of the called functions here, such as \texttt{vector}, \texttt{add} etc. have to be implemented as stateful functions, see Figure~\ref{fig:ohua-sfn-example}.
 
 \begin{figure}[h]
+  \begin{subfigure}{.5\textwidth}
 \begin{minted}{Clojure}
 (def main
   (ohua
@@ -25,7 +35,11 @@ All of the called functions here, such as \texttt{vector}, \texttt{add} etc. hav
           c (some-action)]
       (vector a b c))))
 \end{minted}
-\includegraphics[width=\linewidth]{../Figures/ohua-code-example}
+  \end{subfigure}
+  \begin{subfigure}{.5\textwidth}
+    \includegr{ohua-code-example}    
+  \end{subfigure}
+
 \caption{An example for code transformation in Ohua}
 \label{fig:ohua-code-example}
 \end{figure}
@@ -34,7 +48,7 @@ All of the called functions here, such as \texttt{vector}, \texttt{add} etc. hav
 \begin{minted}{Java}
 public class Add {
   @defsfn // <- the annotation to make a stateful function
-  public Int add(Int i1, Int i2) {
+  public Int add(int i1, int i2) {
     return i1 + i2;
   }
 }
@@ -50,21 +64,15 @@ Also subsequent calls to the same node with unrelated data, as a result of a map
 This property allows us to do deterministic state modifications on an object of the class the stateful function is attached to.
 As a result we obtain pipeline parallelism.
 
-\begin{figure}
-  \includegraphics[width=\linewidth]{../Figures/ohua-compiler-flow}
-  \caption{Compiler flow of Ohua}
-  \label{fig:ohua-compiler-flow}
-\end{figure}
-
-
 \section{Stateful Functions}
 
+\label{sec:stateful-functions}
 
 Stateful functions are the implementation for the nodes of the Ohua dataflow graph.
 They represent atomic pieces of code which the Ohua runtime schedules.
 Stateful functions can be implemented in Java or Scala\cite{ScalaLanguage} by annotating a method with \texttt{@defsfn}, or in Clojure by using the \texttt{defsfn} macro.
 Each stateful function has an associated class, which holds an internal, opaque state of the node.
-Whenever a stateful function is referenced in code in the \texttt{ohua} or \texttt{algo} macro the runtime creates a new instance of the class in which the stateful function is implemented.
+Whenever a stateful function is referenced in code the runtime creates a new instance of the class in which the stateful function is implemented.
 As a result invocations at the same call site of a stateful function implicitly share an opaque state.
 But different call sites do not share state implicitly.
 To share state across call sites the state has to be explicitly passed to the function as an argument.
@@ -85,10 +93,11 @@ Furthermore there should not be any dependency on invocation ordering which is n
 The snippet of code in Figure~\ref{fig:indeterministic-code} for example: If this were normal Clojure code, the read would be executed before the write due to the sequential, deterministic semantics of a Clojure \texttt{let} binding.
 In Ohua however, since there are no data dependencies between \texttt{read} and \texttt{write}, the execution order of those two stateful functions is nondeterministic and they could even be executed simultaneously.
 The graph in Figure~\ref{fig:indeterministic-code} shows very nicely how at this stage there is no visible order for those two actions in the compiled graph.
-Both $read-database > write-database > compute$ and $write-database > read-database > compute$ are valid topological orderings of the dataflow graph and Ohua only guarantees \emph{a} topological call order, not which.
+Both \texttt{read-database > write-database > compute}\footnote{\texttt{a > b} means \texttt{a} is executed before \texttt{b}} and \texttt{write-database > read-database > compute} are valid topological orderings of the dataflow graph and Ohua only guarantees \emph{a} topological call order, not which.
 When the algorithm is executed using the \texttt{ohua} or \texttt{<-ohua} macro the algorithms Clojure code is compiled into a dataflow graph and executed by the Ohua runtime.
 
 \begin{figure}
+  \begin{subfigure}{0.5\textwidth}
 \begingroup
 \definecolor{green(html/cssgreen)}{rgb}{0.0, 0.5, 0.0}
 \catcode`\@=\active
@@ -100,7 +109,10 @@ When the algorithm is executed using the \texttt{ohua} or \texttt{<-ohua} macro 
     (compute a b)))
 \end{minted}
 \endgroup
-\includegraphics[width=\linewidth]{../Figures/indeterministic-code-example}
+  \end{subfigure}
+  \begin{subfigure}{0.5\textwidth}
+    \includegr{indeterministic-code-example}
+  \end{subfigure}
 \caption{An example of indeterministic code}
 \label{fig:indeterministic-code}
 \end{figure}

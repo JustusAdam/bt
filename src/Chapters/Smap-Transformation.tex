@@ -17,22 +17,20 @@ map (f . g) == map f . map g
     \label{fig:map-comp-decomp}
 \end{figure}
 
+\begin{figure}[h]
+    \begin{itemize}
+        \item \texttt{::} and \texttt{->} denote a type signatures. Types between arrows are input types and the last type is the return type.
+        For instance \texttt{f :: Int -> Int -> Bool} equates to the C type signature \texttt{bool f(int ..., int ...)} and \texttt{val :: Int} would equate to \texttt{int val}.
+        These signatures can be placed either above function definitions, but also inline after a value, to fix its type.
+        \item Lowercase words in type signatures are type variables. Can be thought of as being like the type variables in generics in java or templates in C++ but bound for only one type signature.
+        \item \texttt{forall <vars> .} binds the type variables \texttt{<vars>} for the entire function. Therefore any reference to a name from \texttt{<vars>} in a type signature in the function body now references the same type.
+        \item \texttt{where} blocks define local values and functions.
+        \item \texttt{(a, b)} denotes a 2-tuple with fields of type \texttt{a} and type \texttt{b}
+    \end{itemize}
+    \caption{Remarks for denotational code}
+\end{figure}
 
-The basic transformation steps can be described as follows.
-The function inside the map is separated into a computation before the fetch, the fetch, and a computation after the fetch, see \texttt{decomposed} in Figure~\ref{fig:map-decomposition-in-code}.
-Since there may be data flowing from \texttt{before} to \texttt{after} which does not pass through the \texttt{fetch} we choose \texttt{before} and \texttt{after} such that \texttt{before} returns a tuple where the first part of the tuple contains only the data our fetch can operate on and the second part of the tuple contains any additional data which needs to flow between \texttt{before} and \texttt{after}.
-\texttt{after} then accepts a tuple where the first part is the result of executing the fetch and the second part is the untouched additional data flowing between \texttt{before} and \texttt{after}.
-In the middle we apply the fetch function to only the first part of the tuple with the higher order function \texttt{first}.
-
-Subsequently we can transform the single map into multiple according to the rule in Figure~\ref{fig:map-comp-decomp}.
-Then we restructure the data pulling the tuple out of the sequence using \texttt{unzip} and repackage later with \texttt{zip}.
-Lastly we can replace \texttt{map fetch} with \texttt{fetchMany}.
-
-In Figure~\ref{fig:map-decomposition-in-code} you can see this rewrite described in stages of Haskell code which should show the correctness in so far as each stage would typecheck and the top level type signature of each stage does not change.
-It is no proof of semantic correctness but provided as an indicator.
-In the future we hope to formalise these rewrite rules based on lambda calculus and prove correct semantics as well, see Chapter~\ref{ch:future-work}.
-
-\begin{figure}
+\begin{figure}[h]
 \begin{minted}{Haskell}
 fetchMany :: [FetchData] -> [FetchResult]
 fetchMany = -- omitted
@@ -80,9 +78,24 @@ replaced =
     . unzip
     . map before
 \end{minted}
-\caption{Decomposing maps in Haskell}
+\caption{Denotational decomposition}
 \label{fig:map-decomposition-in-code}
+
 \end{figure}
+
+The basic transformation steps can be described as follows.
+The function inside the map is separated into a computation before the fetch, the fetch, and a computation after the fetch, see \texttt{decomposed} in Figure~\ref{fig:map-decomposition-in-code}.
+Since there may be data flowing from \texttt{before} to \texttt{after} which does not pass through the \texttt{fetch} we choose \texttt{before} and \texttt{after} such that \texttt{before} returns a tuple where the first part of the tuple contains only the data our fetch can operate on and the second part of the tuple contains any additional data which needs to flow between \texttt{before} and \texttt{after}.
+\texttt{after} then accepts a tuple where the first part is the result of executing the fetch and the second part is the untouched additional data flowing between \texttt{before} and \texttt{after}.
+In the middle we apply the fetch function to only the first part of the tuple with the higher order function \texttt{first}.
+
+Subsequently we can transform the single map into multiple according to the rule in Figure~\ref{fig:map-comp-decomp}.
+Then we restructure the data pulling the tuple out of the sequence using \texttt{unzip} and repackage later with \texttt{zip}.
+Lastly we can replace \texttt{map fetch} with \texttt{fetchMany}.
+
+In Figure~\ref{fig:map-decomposition-in-code} you can see this rewrite described in a first attempt at denotational semantics in Haskell as a typed lambda calculus, which should indicate correctness in so far as each stage would typecheck and the top level type signature of each stage does not change.
+It is no proof of semantic correctness but provided as an indicator.
+In the future we hope to formalise these rewrite rules based on lambda calculus and prove correct semantics as well, see Chapter~\ref{ch:future-work}.
 
 
 \section{Implementation detail}
@@ -100,8 +113,14 @@ A new \texttt{smap} operator is inserted after the fetch to break the list into 
 A graphical example of this can be seen in Figure \ref{ch:smap-transformation}.
 
 \begin{figure}[h]
-	\includegraphics[width=\textwidth]{Figures/smap-rewrite-original}
-	\includegraphics[width=\textwidth]{Figures/smap-rewrite}
+    \begin{subfigure}{\textwidth}
+        \includegr{smap-rewrite-original}
+        \caption{Smap original}
+    \end{subfigure}
+    \begin{subfigure}{\textwidth}
+        \includegr{smap-rewrite}
+        \caption{Smap after rewrite}
+    \end{subfigure}
 	\label{fig:smap-transformation}
 	\caption{Smap transformation}
 \end{figure}
@@ -115,10 +134,10 @@ We can therefore support arbitrary deep nestings of \texttt{smaps} (tree height)
 Our rose tree only holds one type of data and therefore can easily be flattened into a list of data items and later be reconstructed into a tree.
 The Java programmer will recognise the Composite Pattern\cite{gamma1995design} in the definition of our tree, which comprises of an abstract tree base class, Figure \ref{fig:tree-impl-base-class} and two concrete implementations with a branch (Figure~\ref{fig:tree-impl-branch}) and a leaf (Figure~\ref{fig:tree-impl-request-class}).
 
-\begin{figure}
+\begin{figure}[h]
 
 \begin{minted}{Java}
-public abstract class RequestTree {
+abstract class RequestTree {
     public abstract
     Stream<Request> getRequestsStream();
 
@@ -138,21 +157,19 @@ In this case the flat request stream simply comprises of the concatenation of al
 We don't need any further knowledge of the structure of those subtrees to obtain the requests here.
 Although this structure is technically capable of handling a heterogeneous list of subtrees, in practice, as a result of how these trees are created sibling branches have the same height and width.
 
-\begin{figure}
+\begin{figure}[h]
 
 \begin{minted}{Java}
-public final class RequestTreeBranch
-             extends RequestTree {
-    private final Iterable<RequestTree> subtrees;
-    @Override
-    public Stream<Request> getRequestsStream() {
+class RequestTreeBranch
+      extends RequestTree {
+    Iterable<RequestTree> subtrees;
+
+    Stream<Request> getRequestsStream() {
         return StreamSupport
                   .stream(subtrees.spliterator(), false)
                   .flatMap(RequestTree::getRequestsStream);
     }
 
-    @Override
-    public
     Iterable<Object>
     buildResult(Map<Request, Object> responses) {
         return StreamSupport
@@ -169,20 +186,17 @@ public final class RequestTreeBranch
 \end{figure}
 
 
-\begin{figure}
+\begin{figure}[h]
 
 \begin{minted}{Java}
-public final class Request<P, R>
-             extends RequestTree {
-    @Override
-    public Stream<Request> getRequestsStream() {
+class Request<P, R>
+      extends RequestTree {
+    Stream<Request> getRequestsStream() {
         return Collections
                  .singletonList((Request) this)
                  .stream();
     }
 
-    @Override
-    public
     Iterable<Object>
     buildResult(Map<Request, Object> responses) {
         return Collections.singletonList(responses.get(this));
