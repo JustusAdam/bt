@@ -37,7 +37,7 @@ All of the called functions here, such as \texttt{vector}, \texttt{add} etc. hav
 \end{minted}
   \end{subfigure}
   \begin{subfigure}{.5\textwidth}
-    \includegr{ohua-code-example}    
+    \includegr{ohua-code-example}
   \end{subfigure}
 
 \caption{An example for code transformation in Ohua}
@@ -46,9 +46,9 @@ All of the called functions here, such as \texttt{vector}, \texttt{add} etc. hav
 
 \begin{figure}[h]
 \begin{minted}{Java}
-public class Add {
+class Add {
   @defsfn // <- the annotation to make a stateful function
-  public Int add(int i1, int i2) {
+  int add(int i1, int i2) {
     return i1 + i2;
   }
 }

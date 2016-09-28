@@ -8,24 +8,24 @@ Experiments are usually run against the competing systems Haxl\cite{Haxl:library
 As mentioned in previous Chapters the code used for testing all systems in equal conditions is generated with our random code generator\cite{Goens-rand-code-graph}.
 Additional boilerplate implementations for test data sources etc can be found in the \yauhau{} repository\cite{Yauhau:repository:link} for the \yauhau{} experiment code and for Haxl in the haxl-test-generated-graph\footnote{https://github.com/JustusAdam/haxl-test-generated-graph} repository.
 
-\section{Functions}
-
-This experiment shows the effectiveness of the round-detection algorithm on modularised code by generating program graphs which contains calls to algorithms.
-Our experiment setup for this experiment operates on several graphs of constant depth (number of levels is constant).
-We gradually increase the relative amount of algorithm calling nodes in the graph.
-Additionally we run the series against multiple seeds to get an average result, hence fractional amounts of rounds.
-
-\begin{figure}[h]
-    \includegraphics[width=\linewidth]{../Figures/func-experiment.eps}
-    \caption{Number of rounds performed with functions enabled}
-    \label{fig:experiment-functions}
-\end{figure}
-
-As is visible in the graph in Figure~\ref{fig:experiment-functions} our algorithm performs better than Haxl.
-This is due to restrictions of using a runtime detection.
-In Haxl the fetches inside a called function can only be inspected once all function parameters were provided and the term was bound to the monad.
-Fetches which were independent from the function arguments therefore can still only be executed once the function received all input parameters
-Since our algorithm operates on a dataflow graph and splices algorithms we can detect fetches which are independent from algorithm arguments and perform them before the algorithm would even be called.
+% \section{Functions}
+%
+% This experiment shows the effectiveness of the round-detection algorithm on modularised code by generating program graphs which contains calls to algorithms.
+% Our experiment setup for this experiment operates on several graphs of constant depth (number of levels is constant).
+% We gradually increase the relative amount of algorithm calling nodes in the graph.
+% Additionally we run the series against multiple seeds to get an average result, hence fractional amounts of rounds.
+%
+% \begin{figure}[h]
+%     \includegraphics[width=\linewidth]{../Figures/func-experiment.eps}
+%     \caption{Number of rounds performed with functions enabled}
+%     \label{fig:experiment-functions}
+% \end{figure}
+%
+% As is visible in the graph in Figure~\ref{fig:experiment-functions} our algorithm performs better than Haxl.
+% This is due to restrictions of using a runtime detection.
+% In Haxl the fetches inside a called function can only be inspected once all function parameters were provided and the term was bound to the monad.
+% Fetches which were independent from the function arguments therefore can still only be executed once the function received all input parameters
+% Since our algorithm operates on a dataflow graph and splices algorithms we can detect fetches which are independent from algorithm arguments and perform them before the algorithm would even be called.
 
 \section{Smap}
 

@@ -57,13 +57,13 @@ I/O actions in \yauhau{} are instances of the \texttt{Request} class.
 
 \begin{figure}[h]
 \begin{minted}{Java}
-public final class Request<Payload, Return>{
-    private final Paylod payload;
-    private final IDataSource<Payload, Return> dataSource;
-    public Request(Payload payload,
-                   IDataSource<Payload, Return> dataSource)
-                  { /* implementation omitted */ }
-    /* omitted code */
+class Request<Payload, Return>{
+  Paylod payload;
+  IDataSource<Payload, Return> dataSource;
+  Request(Payload payload,
+          IDataSource<Payload, Return> dataSource)
+    { /* implementation omitted */ }
+  /* omitted code */
 }
 \end{minted}
 \caption{Implementation of the \texttt{Request} class}
@@ -75,9 +75,9 @@ Here the data source, similarly to Haxl implements a Java interface \texttt{IDat
 
 \begin{figure}[h]
 \begin{minted}{Java}
-public interface IDataSource<Payload, Return> {
-    Object getIdentifier();
-    Iterable<Return> fetch(Iterable<Payload> requests);
+interface IDataSource<Payload, Return> {
+  Object getIdentifier();
+  Iterable<Return> fetch(Iterable<Payload> requests);
 }
 \end{minted}
 \caption{Implementation of the \texttt{IDataSource} interface}
@@ -97,14 +97,15 @@ If the source works as expected this result sequence should hold results of perf
 
 \begin{figure}[h]
 \begin{minted}{Java}
-public final class FetchOp<P, R> {
-    @defsfn
-    public R fetch(Request<P, R> request) {
-        ArrayList<P> l = new ArrayList<>();
-        l.add(request.getPayload());
-        Iterable<R> res = request.getDataSource().fetch(l);
-        return res.iterator().next();
-    }
+class FetchOp<P, R> {
+  @defsfn
+  R fetch(Request<P, R> request) {
+    List<P> l = Collections.singletonList(
+                  request.getPayload()
+                );
+    Iterable<R> res = request.getDataSource().fetch(l);
+    return res.iterator().next();
+  }
 }
 \end{minted}
 \caption{implementation of the \texttt{fetch} stateful function}

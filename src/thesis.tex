@@ -50,6 +50,8 @@ headsepline, % Uncomment to get a line under the header
 \usepackage{subcaption}
 
 \usepackage{mathtools}
+\usepackage{color}
+\usepackage{xcolor}
 \usepackage[ruled,vlined,commentsnumbered]{algorithm2e}
 
 \usepackage[
@@ -60,6 +62,7 @@ natbib=true]{biblatex} % Use the bibtex backend with the authoryear citation sty
 \addbibresource{main.bib} % The filename of the bibliography
 
 \usepackage[autostyle=true]{csquotes} % Required to generate language-dependent quotes in the bibliography
+
 
 %----------------------------------------------------------------------------------------
 %	MARGIN SETTINGS
@@ -79,7 +82,7 @@ natbib=true]{biblatex} % Use the bibtex backend with the authoryear citation sty
 %	THESIS INFORMATION
 %----------------------------------------------------------------------------------------
 
-\thesistitle{Ÿauhau Extensions to Support Nested Structures, Conditionals and Functions} % Your thesis title, this is used in the title and abstract, print it elsewhere with \ttitle
+\thesistitle{Control Flow and Side Effects support in a Framework for automatic I/O batching} % Your thesis title, this is used in the title and abstract, print it elsewhere with \ttitle
 \supervisor{Sebastian \textsc{Ertel}} % Your supervisor's name, this is used in the title page, print it elsewhere with \supname
 \examiner{} % Your examiner's name, this is not currently used anywhere in the template, print it elsewhere with \examname
 \degree{Bachelor of Science} % Your degree name, this is used in the title page and abstract, print it elsewhere with \degreename
@@ -90,7 +93,7 @@ natbib=true]{biblatex} % Use the bibtex backend with the authoryear citation sty
 \keywords{} % Keywords for your thesis, this is not currently used anywhere in the template, print it elsewhere with \keywordnames
 \university{\href{http://tu-dresden.de}{Technische Universität Dresden}} % Your university's name and URL, this is used in the title page and abstract, print it elsewhere with \univname
 \department{\href{http://department.university.com}{Chair for Compiler Construction}} % Your department's name and URL, this is used in the title page and abstract, print it elsewhere with \deptname
-\group{\href{http://researchgroup.university.com}{Dataflow Optimization Research Group}} % Your research group's name and URL, this is used in the title page, print it elsewhere with \groupname
+\group{\href{http://researchgroup.university.com}{ }} % Your research group's name and URL, this is used in the title page, print it elsewhere with \groupname
 \faculty{\href{http://inf.tu-dresden.de}{Faculty for Computer Science}} % Your faculty's name and URL, this is used in the title page and abstract, print it elsewhere with \facname
 
 \hypersetup{pdftitle=\ttitle} % Set the PDF's title to your title
@@ -194,13 +197,17 @@ natbib=true]{biblatex} % Use the bibtex backend with the authoryear citation sty
 \begin{abstract}
 \addchaptertocentry{\abstractname} % Add the abstract to the table of contents
 
-Modern large scale, distributed applications require the efficient execution of IO operations such as network or database access.
-In this thesis I expand on an idea implemented prior to this in the paper ``\yauhauPaperTitle{}''.
-The main focus is generalising its rewrite algorithms to handle alternate flow of control as is present in mapping operations and conditionals.
-In addition to that I will provide further evidence for the efficiency achieved in \yauhau{} by conducting experiments on randomly generated program graphs comparing performance with existing solutions.
-Lastly I take a look at semantics for effectful actions in the \yauhau{} context, which are writes to your data source.
-I will describe issues our dataflow approach introduces into the semantics of writes and how we solve them.
+The largest source of latency for many modern systems, particularly services, is the inherent latency of I/O operations.
+Disk I/O, database access and network bound communication is frequent, especially in data processing systems and distributed service infrastructures.
+Making I/O efficient is cumbersome, involves asynchronous programming and caching and hinders modularity when attempting to perform batch jobs.
 
+There have been a few solutions proposed to automate this, first and foremost Haxl, a Haskell library.
+We proposed an alternate, improved implementation called \yauhau{}.
+It leverages dataflow to produce even better performance while being independent from any particular code writing style in a minimal Embedded Domain-Specific Language (EDSL).
+
+In this thesis we first explore the techniques used by \yauhau{} to make I/O more efficient.
+Secondly we identify, explain and solve issues in \yauhau{} arising from control flow.
+Furthermore we suggest new optimisations for the compiler and implement safety guards for handling side effects.
 \end{abstract}
 
 %----------------------------------------------------------------------------------------

@@ -25,19 +25,19 @@ The former drops a request from the cache matching the current one and the latte
 \begin{figure}[h]
 \begin{minted}{Java}
 /* Caches should implement both interfaces */
-public interface Dropable<A> {
-    Dropable<A> dropOne(A a);
+interface Dropable<A> {
+  Dropable<A> dropOne(A a);
 
-    Dropable<A> dropAll();
+  Dropable<A> dropAll();
 }
 
-public interface Cache {
-    BiFunction<Dropable<Request>, Request, Dropable<Request>>
-    getRemoveAction();
-    Object get(Request r);
-    Object set(Request r, Object resp);
-    void handleStore(Request r);
-    int cacheSize();
+interface Cache {
+  BiFunction<Dropable<Request>, Request, Dropable<Request>>
+  getRemoveAction();
+  Object get(Request r);
+  Object set(Request r, Object resp);
+  void handleStore(Request r);
+  int cacheSize();
 }
 \end{minted}
 \caption{The cache interface}

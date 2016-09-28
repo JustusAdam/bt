@@ -49,7 +49,7 @@ decomposed = map (after . first fetch . before)
           fetch :: FetchData -> FetchResult
           fetch = -- omitted
 
-          after :: (FetchResult, free)
+          after :: (FetchResult, free) -> b
           after = -- omitted
 
 fission :: forall a b free. [a] -> [b]
@@ -138,12 +138,11 @@ The Java programmer will recognise the Composite Pattern\cite{gamma1995design} i
 
 \begin{minted}{Java}
 abstract class RequestTree {
-    public abstract
-    Stream<Request> getRequestsStream();
+  abstract Stream<Request>
+  getRequestsStream();
 
-    public abstract
-    Iterable<Object>
-    buildResult(Map<Request, Object> responses);
+  abstract Iterable<Object>
+  buildResult(Map<Request, Object> responses);
 }
 \end{minted}
 \caption{Abstract base class}
@@ -162,22 +161,22 @@ Although this structure is technically capable of handling a heterogeneous list 
 \begin{minted}{Java}
 class RequestTreeBranch
       extends RequestTree {
-    Iterable<RequestTree> subtrees;
+  Iterable<RequestTree> subtrees;
 
-    Stream<Request> getRequestsStream() {
-        return StreamSupport
-                  .stream(subtrees.spliterator(), false)
-                  .flatMap(RequestTree::getRequestsStream);
-    }
+  Stream<Request> getRequestsStream() {
+    return StreamSupport
+              .stream(subtrees.spliterator(), false)
+              .flatMap(RequestTree::getRequestsStream);
+  }
 
-    Iterable<Object>
-    buildResult(Map<Request, Object> responses) {
-        return StreamSupport
-                  .stream(subtrees.spliterator(), false)
-                  .map(t -> t.buildResult(responses))
-                  .collect(Collectors.toList());
-    }
-    /* omitted code */
+  Iterable<Object>
+  buildResult(Map<Request, Object> responses) {
+    return StreamSupport
+              .stream(subtrees.spliterator(), false)
+              .map(t -> t.buildResult(responses))
+              .collect(Collectors.toList());
+  }
+  /* omitted code */
 }
 \end{minted}
 \caption{Concrete branch}
@@ -191,17 +190,17 @@ class RequestTreeBranch
 \begin{minted}{Java}
 class Request<P, R>
       extends RequestTree {
-    Stream<Request> getRequestsStream() {
-        return Collections
-                 .singletonList((Request) this)
-                 .stream();
-    }
+  Stream<Request> getRequestsStream() {
+    return Collections
+             .singletonList((Request) this)
+             .stream();
+  }
 
-    Iterable<Object>
-    buildResult(Map<Request, Object> responses) {
-        return Collections.singletonList(responses.get(this));
-    }
-    /* omitted code */
+  Iterable<Object>
+  buildResult(Map<Request, Object> responses) {
+    return Collections.singletonList(responses.get(this));
+  }
+  /* omitted code */
 }
 \end{minted}
 
