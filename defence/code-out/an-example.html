@@ -1,0 +1,26 @@
+<div class="highlight"><pre><span></span><span class="p">(</span><span class="kd">defn </span><span class="nv">make-header</span> <span class="p">[]</span>
+  <span class="p">(</span><span class="k">let </span><span class="p">[</span><span class="nv">pages</span> <span class="p">(</span><span class="nf">fetch-pages</span><span class="p">)]</span>
+    <span class="p">(</span><span class="nf">Header.</span> <span class="p">(</span><span class="nf">make-links</span> <span class="nv">pages</span><span class="p">))))</span>
+
+<span class="p">(</span><span class="kd">defn </span><span class="nv">render-excerpt</span> <span class="p">[</span><span class="nv">id</span><span class="p">]</span>
+  <span class="p">(</span><span class="nf">truncate</span> <span class="p">(</span><span class="nf">fetch-content</span> <span class="nv">id</span><span class="p">)))</span>
+
+<span class="p">(</span><span class="kd">defn </span><span class="nv">make-sidebar</span> <span class="p">[]</span>
+  <span class="p">(</span><span class="k">let </span><span class="p">[</span><span class="nv">most-read</span> <span class="p">(</span><span class="nb">take </span><span class="mi">5</span>
+                    <span class="p">(</span><span class="nb">sort-by </span><span class="ss">:read-count</span> 
+                      <span class="p">(</span><span class="nb">map </span><span class="p">(</span><span class="k">fn </span><span class="p">[</span><span class="nv">id</span><span class="p">]</span> <span class="p">{</span><span class="ss">:id</span> <span class="nv">id</span> <span class="ss">:read-count</span> <span class="p">(</span><span class="nf">fetch-read-count</span> <span class="nv">id</span><span class="p">)})</span>  
+                        <span class="p">(</span><span class="nf">fetch-post-ids</span><span class="p">))))</span>
+        <span class="nv">most-recent</span> <span class="p">(</span><span class="nb">take </span><span class="mi">5</span> 
+                      <span class="p">(</span><span class="nb">sort-by </span><span class="ss">:date</span>
+                        <span class="p">(</span><span class="nb">map </span><span class="p">(</span><span class="k">fn </span><span class="p">[</span><span class="nv">id</span><span class="p">]</span> <span class="p">{</span><span class="ss">:id</span> <span class="nv">id</span> <span class="ss">:date</span> <span class="p">(</span><span class="nf">fetch-creation-date</span> <span class="nv">id</span><span class="p">)})</span>
+                          <span class="p">(</span><span class="nf">fetch-post-ids</span><span class="p">))))]</span>
+    <span class="p">(</span><span class="nf">Sidebar.</span> 
+      <span class="p">(</span><span class="nb">map </span><span class="nv">render-excerpt</span> <span class="p">(</span><span class="nb">map </span><span class="ss">:id</span> <span class="nv">most-read</span><span class="p">))</span>
+      <span class="p">(</span><span class="nb">map </span><span class="nv">render-excerpt</span> <span class="p">(</span><span class="nb">map </span><span class="ss">:id</span> <span class="nv">most-recent</span><span class="p">)))))</span>
+
+<span class="p">(</span><span class="kd">defn </span><span class="nv">article</span> <span class="p">[</span><span class="nv">id</span><span class="p">]</span>
+  <span class="p">(</span><span class="k">let </span><span class="p">[</span><span class="nv">sidebar</span> <span class="p">(</span><span class="nf">make-sidebar</span><span class="p">)</span>
+        <span class="nv">content</span> <span class="p">(</span><span class="nf">Content.</span> <span class="p">(</span><span class="nf">fetch-content</span> <span class="nv">id</span><span class="p">))</span>
+        <span class="nv">header</span> <span class="p">(</span><span class="nf">make-header</span><span class="p">)]</span>
+    <span class="p">(</span><span class="nf">make-page</span> <span class="nv">content</span> <span class="nv">sidebar</span> <span class="nv">header</span><span class="p">)))</span>
+</pre></div>

@@ -161,7 +161,7 @@ smapPrimer filename = do
     let groupedAndSorted = map (second $ percentagesToRounds prctFuns) values
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "# levels"
+        layout_x_axis . laxis_title .= "percentage of functions"
         layout_y_axis . laxis_title .= "# fetch rounds"
         plotAll groupedAndSorted
 
@@ -237,8 +237,9 @@ ifExperimentPrct filename = do
             & map (second prepare)
 
     renderWithDefaultStyle filename $ do
-        layout_x_axis . laxis_title .= "Probability of conditionals"
-        layout_y_axis . laxis_title .= "Round difference (%)"
+        layout_x_axis . laxis_title .= "probability of conditionals"
+        layout_y_axis . laxis_title .= "round difference (%)"
+        layout_legend .= Nothing
         plotErrBarsMinMax [("Difference", grouped)]
     where
         prepare :: [MeasuredGraph] -> [Double]

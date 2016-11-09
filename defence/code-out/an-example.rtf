@@ -1,0 +1,27 @@
+{\rtf1\ansi\uc0\deff0{\fonttbl{\f0\fmodern\fprq1\fcharset0;}}{\colortbl;\red136\green136\blue136;\red186\green33\blue33;\red0\green68\blue221;\red102\green102\blue102;\red64\green128\blue128;\red160\green160\blue0;\red25\green23\blue124;\red0\green128\blue0;\red187\green102\blue136;\red187\green102\blue34;\red136\green0\blue0;\red170\green34\blue255;\red153\green153\blue153;\red0\green160\blue0;\red160\green0\blue0;\red255\green0\blue0;\red128\green0\blue128;\red176\green0\blue64;\red0\green0\blue255;\red187\green187\blue187;\red188\green122\blue0;\red0\green0\blue128;\red125\green144\blue41;\red210\green65\blue58;}\f0 ({\cf8\b defn }{\cf7 make-header} []\par
+  ({\cf8\b let }[{\cf7 pages} ({\cf19 fetch} ({\cf19 Pages.}))]\par
+    ({\cf19 make-links} {\cf7 pages})))\par
+\par
+({\cf8\b defn }{\cf7 render-excerpt} [{\cf7 id}]\par
+  ({\cf19 truncate} ({\cf19 fetch} ({\cf19 Content.} {\cf7 id}))))\par
+\par
+({\cf8\b defn }{\cf7 make-sidebar} []\par
+  ({\cf8\b let }[{\cf7 most-read} \par
+        ({\cf8 take }{\cf4 5}\par
+          ({\cf8 sort-by }{\cf7 :read-count} \par
+            ({\cf8 map }({\cf8\b fn }[{\cf7 id}] \{{\cf7 :id} {\cf7 id} {\cf7 :read-count} ({\cf19 fetch} ({\cf19 ReadCount.} {\cf7 id}))\})  \par
+              ({\cf19 fetch} ({\cf19 PostIds.})))))\par
+        {\cf7 most-recent} \par
+        ({\cf8 take }{\cf4 5} \par
+          ({\cf8 sort-by }{\cf7 :date}\par
+            ({\cf8 map }({\cf8\b fn }[{\cf7 id}] \{{\cf7 :id} {\cf7 id} {\cf7 :date} ({\cf19 fetch} ({\cf19 CreationDate.} {\cf7 id}))\})\par
+              ({\cf19 fetch} ({\cf19 PostIds.})))))]\par
+    [({\cf8 map }{\cf7 render-excerpt} ({\cf8 map }{\cf7 :id} {\cf7 most-read}))\par
+     ({\cf8 map }{\cf7 render-excerpt} ({\cf8 map }{\cf7 :id} {\cf7 most-recent}))])))\par
+\par
+({\cf8\b defn }{\cf7 article} [{\cf7 id}]\par
+  ({\cf8\b let }[{\cf7 sidebar} ({\cf19 make-sidebar})\par
+        {\cf7 content} ({\cf19 fetch} ({\cf19 Content.} {\cf7 id}))\par
+        {\cf7 header} ({\cf19 make-header})]\par
+    ({\cf19 make-page} {\cf7 content} {\cf7 sidebar} {\cf7 header})))\par
+}
