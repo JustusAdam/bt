@@ -17,10 +17,10 @@ The program itself is written in a Clojure EDSL, input in the lower part of Figu
 
 The created dataflow graph is a representation of atomic parts of the program, the stateful functions, and the data dependencies between them.
 Since Ohua currently does not support recursion this graph is a DAG.
-Nodes are call sites of atomic pieces of code, these pieces of code are called stateful functions.
+Nodes are call sites\footnote{A `call site' of a function is the position in the code where control is handed to the function and it starts executing.} of atomic pieces of code, these pieces of code are called stateful functions.
 Edges represent data dependencies between the call sites.
 Edge direction indicates result and argument.
-The result of the source node is argument to the target node.
+The result of the source node is an argument to the target node.
 The result value of one node may be used by multiple other nodes and each node can have multiple inputs or none at all.
 An example of how this transformation looks can be seen in Figure~\ref{fig:ohua-code-example}.
 All of the called functions here, such as \texttt{vector}, \texttt{add} etc. have to be implemented as stateful functions, see Figure~\ref{fig:ohua-sfn-example}.
@@ -73,14 +73,13 @@ They represent atomic pieces of code which the Ohua runtime schedules.
 Stateful functions can be implemented in Java or Scala\cite{ScalaLanguage} by annotating a method with \texttt{@defsfn}, or in Clojure by using the \texttt{defsfn} macro.
 Each stateful function has an associated class, which holds an internal, opaque state of the node.
 Whenever a stateful function is referenced in code the runtime creates a new instance of the class in which the stateful function is implemented.
-As a result invocations at the same call site of a stateful function implicitly share an opaque state.
-But different call sites do not share state implicitly.
+As a result invocations at the same call site of a stateful function implicitly share an opaque state, but different call sites do not share state implicitly.
 To share state across call sites the state has to be explicitly passed to the function as an argument.
 This ensures that state sharing is transparent to the runtime without requiring in depth knowledge about the structure of the state itself or the stateful function.
 
 When executing the dataflow graph the runtime dynamically schedules nodes on a configurable number of cpu cores.
 As a result the precise order in which the graph is executed is indeterministic.
-However the runtime ensures that for each node the order of its subsequent invocations is preserved which ensures correct semantics not only in the high level algorithm but also with regards to the internal, opaque state of each stateful function itself.
+However the runtime ensures that for each node the order of its subsequent invocations is preserved which ensures correct semantics not only in the high level algorithm but also with regard to the internal, opaque state of each stateful function itself.
 
 \section{Algorithms}
 
@@ -92,7 +91,7 @@ No two functions should share data in any way other then by explicitly passing t
 Furthermore there should not be any dependency on invocation ordering which is not expressed directly through data dependencies.
 The snippet of code in Figure~\ref{fig:indeterministic-code} for example: If this were normal Clojure code, the read would be executed before the write due to the sequential, deterministic semantics of a Clojure \texttt{let} binding.
 In Ohua however, since there are no data dependencies between \texttt{read} and \texttt{write}, the execution order of those two stateful functions is nondeterministic and they could even be executed simultaneously.
-The graph in Figure~\ref{fig:indeterministic-code} shows very nicely how at this stage there is no visible order for those two actions in the compiled graph.
+The graph in Figure~\ref{fig:indeterministic-code} shows nicely how at this stage there is no visible order for those two actions in the compiled graph.
 Both \texttt{read-database > write-database > compute}\footnote{\texttt{a > b} means \texttt{a} is executed before \texttt{b}} and \texttt{write-database > read-database > compute} are valid topological orderings of the dataflow graph and Ohua only guarantees \emph{a} topological call order, not which.
 When the algorithm is executed using the \texttt{ohua} or \texttt{<-ohua} macro the algorithms Clojure code is compiled into a dataflow graph and executed by the Ohua runtime.
 

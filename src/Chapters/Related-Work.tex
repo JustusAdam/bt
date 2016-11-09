@@ -11,7 +11,7 @@ Haxl\cite{Haxl:library:link}\cite{Marlow:2014:NFA:2692915.2628144} is a Haskell\
 
 They describe a system where, by using the Haskell abstraction of an Applicative Functor\cite{mcbride2008applicative}, they are able to find which data access operations are independent from one another and therefore may be fetched as a batch job.
 
-As a very small example in Figure~\ref{fig:operation-in-haxl} we see a function \texttt{commonFriends}.
+As a small example in Figure~\ref{fig:operation-in-haxl} we see a function \texttt{commonFriends}.
 The \texttt{intersection} function depends for its input on both the result of fetching the friends of \texttt{a} as well as the friends of \texttt{b}.
 However the two data fetches \texttt{friendsOf a} and \texttt{friendsOf b} are independent from one another, neither depends on the result of the other, which is what the \texttt{<*>} operator symbolises.
 
@@ -116,7 +116,7 @@ In Haxl this is a \texttt{Data.Sequence.Seq}, which is a type of list.
 At runtime, if a data fetch is encountered it simply gets appended to this list of fetches to execute.
 This way Haxl builds a dynamic list of fetches to execute for each round each time the program is run.
 
-This makes it easily to handle cases where the amount of fetches is not known at compile time.
+This makes it easy to handle cases where the amount of fetches is not known at compile time.
 For instance in conditionals or when executing a fetch over a collection, see Figure~\ref{fig:control-flow-in-haxl}.
 
 \begin{figure}

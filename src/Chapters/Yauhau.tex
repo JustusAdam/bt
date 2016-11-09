@@ -28,7 +28,7 @@ This is a dynamic way of finding parallel I/O actions, i.e. at runtime a data st
 \end{figure}
 
 You can see the full \yauhau{} transformation flow in Figure~\ref{fig:yauhau-rewrite-flow}.
-We sill discuss the individual parts of this flow graph in the upcoming sections.
+We will discuss the individual parts of this flow graph in the upcoming sections.
 
 \section{Runtime execution}
 
@@ -121,8 +121,8 @@ Hence the round detection finds a minimal set of non overlapping sets of data in
 
 \subsubsection{Algorithm description}
 
-After much consideration I decided to go for a very similar approach to Haxl by simulating running the graph and blocking code paths when a \texttt{fetch} node is encountered.
-Simulating the execution of the program is done by topologically visiting the nodes of the graph while tracking three sets of items.
+To find the rounds in a given program I simulate the execution of the program and block code paths when a \texttt{fetch} node is encountered.
+The simulation is done by topologically visiting the nodes of the graph while tracking three sets of items.
 
 \begin{description}
 	\item[created] The set of created bindings tracks which pieces of data that flow between the nodes of the program have been created prior to a particular point in the program.
@@ -218,9 +218,6 @@ When the round has been dispatched, indicated by the solid red line, its created
 Adding the \fetch{} nodes to the set of visited nodes guarantees that rounds do not overlap.
 Not simulating fetch execution before the round finishes guarantees that no round contains two fetches with data dependencies between them, since the dependent fetch would never have been in a stage before the round was finished since the required binding from the first fetch would not be created before the round finishes.
 Finally since we only dispatch a round once no more executable nodes are found all other nodes have to be fully data dependent and this guarantees the set of rounds to be minimal.
-% TODO maybe actually add a proof by induction here
-% Should be doable by looking at the last stage first and then working backwards to
-% previous stages.
 
 \subsection{Graph rewrite}
 
@@ -268,7 +265,7 @@ For a usage reference see Figure~\ref{fig:free-variables-in-smap}.
 \label{fig:free-variables-in-smap}
 \end{figure}
 
-Normally variable bindings are simply translated into a set of arcs from where the value in the binding was originally created to each site where the variable is used.
+Normally variable bindings are simply translated into a set of arcs from where the value in the binding was created to each site where the variable is used.
 When the source emits a value it is sent down each arc once.
 This poses a problem in the case of smap where the target of the arc is a free variable inside the smap, like in Figure~\ref{fig:free-variables-in-smap}, and other inputs may receive many packets due to the mapping, whereas this input would naively only receive one.
 What Ohua does to solve this is replicate sending the packet once for each element in the mapped collection.
@@ -276,7 +273,7 @@ What Ohua does to solve this is replicate sending the packet once for each eleme
 In Yauhau we run into a similar problem.
 We do not have free variables but perform an operation which is the complete opposite, where we rewrite connections to lead to an accumulator which is positioned outside the current control flow context (\texttt{smap}).
 What we do not consider during our graph transformation is how often any of the fetch operators we are merging are called in the program.
-If we have fetches in different contexts and naively accumulate them we create a similar situation to the one described above, where the inputs to the accumulator receive very different amounts of data.
+If we have fetches in different contexts and naively accumulate them we create a similar situation to the one described above, where the inputs to the accumulator receive different amounts of data.
 An example can be seen in Figure~\ref{fig:naive-batching-context-problem}.
 
 In the example provided we can see two issues.

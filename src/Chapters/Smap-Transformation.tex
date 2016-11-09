@@ -28,6 +28,7 @@ map (f . g) == map f . map g
         \item \texttt{(a, b)} denotes a 2-tuple with fields of type \texttt{a} and type \texttt{b}
     \end{itemize}
     \caption{Remarks for denotational code}
+    \label{fig:remarks-for-denotational}
 \end{figure}
 
 \begin{figure}[h]
@@ -78,6 +79,7 @@ replaced =
     . unzip
     . map before
 \end{minted}
+See remarks in Figure~\ref{fig:remarks-for-denotational}
 \caption{Denotational decomposition}
 \label{fig:map-decomposition-in-code}
 
@@ -129,10 +131,10 @@ A graphical example of this can be seen in Figure \ref{ch:smap-transformation}.
 
 The structure of the nested smap is saved in a tree structure.
 We use a rose tree\cite{MALCOLM1990255} which is only labeled on the leaves.
-This particular tree structure is very flexible both in height and width but restricted to one type of contained item.
+This particular tree structure is flexible both in height and width but restricted to one type of contained item.
 We can therefore support arbitrary deep nestings of \texttt{smaps} (tree height) and arbitrarily large collections to \texttt{smap} over (Number of children $\rightarrow$ tree width) so long as all our items are requests only.
 Our rose tree only holds one type of data and therefore can easily be flattened into a list of data items and later be reconstructed into a tree.
-The Java programmer will recognise the Composite Pattern\cite{gamma1995design} in the definition of our tree, which comprises of an abstract tree base class, Figure \ref{fig:tree-impl-base-class} and two concrete implementations with a branch (Figure~\ref{fig:tree-impl-branch}) and a leaf (Figure~\ref{fig:tree-impl-request-class}).
+The Java programmer will recognise the Composite Pattern\cite{gamma1995design} in the definition of our tree, which comprises an abstract tree base class, Figure \ref{fig:tree-impl-base-class} and two concrete implementations with a branch (Figure~\ref{fig:tree-impl-branch}) and a leaf (Figure~\ref{fig:tree-impl-request-class}).
 
 \begin{figure}[h]
 
@@ -152,7 +154,7 @@ abstract class RequestTree {
 
 The basic tree offers methods to access all contained requests as a flat stream as well as a method for constructing a nested tree structure of results mirroring the structure of the request tree.
 Our tree is composed of unlabeled branches which hold a sequence of subtrees as seen in Figure \ref{fig:tree-impl-branch}.
-In this case the flat request stream simply comprises of the concatenation of all requests from the subtrees.
+In this case the flat request stream simply comprises the concatenation of all requests from the subtrees.
 We don't need any further knowledge of the structure of those subtrees to obtain the requests here.
 Although this structure is technically capable of handling a heterogeneous list of subtrees, in practice, as a result of how these trees are created sibling branches have the same height and width.
 

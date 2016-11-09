@@ -105,7 +105,7 @@ In the example Figure~\ref{fig:enforcing-order-with-seq} we enforce the write to
 
 We could also achieve the same semantics by introducing data dependencies between the two function calls as seen in Figure~\ref{fig:enforcing-order-with-dd}.
 These are typical semantics as would be expected of a program written in a non sequential language such as Ohua or Haskell due to laziness.
-However one problem still remains.
+However one problem remains.
 
 \section{Enforcing order inter algorithm}
 
@@ -118,7 +118,7 @@ The boundary operators however only track in and output to the alorithm.
 An independent fetch like the one we have here in \texttt{does-read} has no data dependency to the algorithm boundary.
 As the result of our write request is only connected to the algorithm boundary, via a parameter, there is no data dependency between the read and the write request after splicing.
 
-If as a result the order of the \texttt{read} and \texttt{write} request was nondeterministic it would be very counterintuitive to the programmer.
+If as a result the order of the \texttt{read} and \texttt{write} request was nondeterministic it would be counterintuitive to the programmer.
 He would expect regular program semantics to hold in this case, which they do not do.
 There is of course still the \texttt{seq} operator, which we could use to enforce ordering and that would work even across algorithms, but require additional work from the programmer.
 Therefore we would like to automate the addition of \texttt{seq} operators in the program where there are independent reads or writes that may cause unexpected indeterminism.

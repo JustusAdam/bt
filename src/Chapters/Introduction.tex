@@ -3,9 +3,6 @@
 
 \label{ch:Intro}
 
-
-% TODO the intro is a bit twisted: normally an intro goes by this structure: problem, missing solutions, contributions, outline (I like it when the last two are co-mingled.)
-
 Data processing applications, particularly online services, perform a large number of I/O bound transactions during processing.
 For instance when reading from disk or a database, querying a remote service or local cache.
 These I/O bound operations introduce significant latency in the application and developers combat this by running I/O operations asynchronously, adding internal caches and preparing batch jobs.
@@ -13,7 +10,7 @@ However writing explicit code which uses these techniques is cumbersome at best 
 
 As a result engineers at Facebook developed a system called Haxl\cite{Marlow:2014:NFA:2692915.2628144} which automates the process of batching, caching and concurrent execution of I/O data fetches.
 In the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from\-Dataflow.''\cite{ErtelGoensAdamEtAl2016}, we propose an improved solution in the form of a plugin for the Ohua\cite{Ertel:2015:OID:2807426.2807431}\cite{Ohua:library:link} compiler, which we call \yauhau{}\footnote{The source code is found on Bitbucket\cite{Yauhau:repository:link}.}.
-Our plugin rewrites a program at compile time, inserting caching and batching I/O operations whilst allowing the programmer to write very concise and straight forward code.
+Our plugin rewrites a program at compile time, inserting caching and batching I/O operations whilst allowing the programmer to write concise and straight forward code.
 We have shown that \yauhau{} performs better on average than Haxl and imposes less restraints on the style of code a programmer has to write.
 
 At compile time however certain information is not available.

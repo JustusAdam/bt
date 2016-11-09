@@ -17,14 +17,13 @@ Output of this operator are two so called \emph{context arcs}, which is a datafl
 Second there are two subgraphs, one representing the code to execute if the condition is \texttt{true} and one to execute if the condition evaluates to false.
 And lastly an operator called \texttt{select} which combines the output of the two subgraphs.
 The two \emph{context arcs} from the \texttt{ifThenElse} operator are each connected to one of the subgraphs.
-Depending on whether the condition evaluates to \texttt{true} or \texttt{false} one of the subgraphs is activated my sending a packet down the respective \emph{context arc}.
+Depending on whether the condition evaluates to \texttt{true} or \texttt{false} one of the subgraphs is activated by sending a packet down the respective \emph{context arc}.
 The \texttt{select} operator then propagates the result from the activated subgraph to the rest of the program.
 
 \begin{figure}
   \includegr{if-in-operators}
-    \includegr{if-in-operators}
-    \caption{If represented in operators}
-    \label{fig:if-in-operators}
+  \caption{If represented in operators}
+  \label{fig:if-in-operators}
 \end{figure}
 
 \subsection{Splitting branches}
@@ -32,15 +31,11 @@ The \texttt{select} operator then propagates the result from the activated subgr
 \subsubsection{In code}
 
 \begin{figure}
+\textbf{Remarks for denotational code:}
 \begin{itemize}
   \item \texttt{Either a b} encodes a choice of type. It is either inhabited by \texttt{a} (\texttt{Left} constructor) or the type \texttt{b} (\texttt{Right} constructor).
   \item \texttt{either f g val} is a function which applies one of two functions \texttt{f} or \texttt{g} to the value within an \texttt{Either} (\texttt{val}).
 \end{itemize}
-\caption{Remarks for denotational code}
-\end{figure}
-
-
-\begin{figure}
 \begin{minted}{Haskell}
 original :: Bool -> a -> a
 original cond val =
@@ -94,8 +89,8 @@ splitIf cond =
 \label{fig:if-rewrite-in-code}
 \end{figure}
 
-We can apply a very similar method of decomposition as we did with smap.
-To keep the transformation simple we assume both branches to have an equal number of fetches such that always two fetches, one from each branch, can be merged together.
+We can apply a similar method of decomposition as we did with smap.
+To keep the transformation simple we assume both branches to have an equal number of fetches such that always two fetches, one from each branch, can be merged.
 If we merge one fetch from each branch we know that no matter the condition, exactly one of them is going to have input present.
 Hence if we select whichever input is present and feed it to our single merged fetch it is guaranteed to have input no matter the condition.
 Afterwards we will ensure the output from \fetch{} is fed back into the continuation of the branch the input came from.
@@ -138,6 +133,7 @@ Any other data flow between the sections before and after the \texttt{fetch} are
       \caption{Graph after transformation}
       \label{fig:if-trans-merged}
   \end{subfigure}
+  \caption{Visual graph transformation}
 \end{figure}
 
 \subsection{Fetch imbalance}
@@ -186,12 +182,12 @@ Meaning each fetch depends on \textbf{all} of its predecessor fetches.
 We have created a branch which contains a sequence of fully dependent fetches.
 However there is no reason why the other, longer branch should be fully dependent also.
 The result is that, once we merge both branches around the fetches the resulting combined fetches inherit both data dependencies.
-Since you cannot depend on more than literally all predecessors the resulting merge inherits its dependence from the fully dependent second branch.
+Since you cannot depend on more than all predecessors the resulting merge inherits its dependence from the fully dependent second branch.
 In the the second branch each fetch was dependent on all previous fetches in the branch, and from this follows that it will have to be in a separate fetch round to all its predecessors.
 And since this is true for all fetches in the branch each of those will be in a separate round.
 They can still be batched with other, parallel parts of the program, however we have lost the opportunity for some batching here, because we have forced sequentiality, even if it may not have existed originally.
 
-There is a very simple solution to this problem, which, coincidentally, also simplified the implementation of the algorithm as a whole.
+There is a simple solution to this problem, which, coincidentally, also simplified the implementation of the algorithm as a whole.
 Now I only generate a single operator called \texttt{mk-empty-req} which creates one empty request, with no dependency other than the \texttt{if} operator.
 Note that the \texttt{mk-empty-req} implementation changed as well to combine the functionality of \texttt{const-null} and the old \texttt{mk-empty-req}.
 This empty request is the only argument to each of the NoOp fetches I create.

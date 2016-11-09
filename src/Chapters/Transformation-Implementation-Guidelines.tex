@@ -2,8 +2,6 @@
 \chapter{Transformation Implementation}
 \label{ch:trans-implementation}
 
-% TODO find a better word than 'guidelines'
-
 \section{Guidelines}
 
 In general, when designing the \yauhau{} graph transformation, I have opted for a simplicity focused approach.
@@ -31,7 +29,7 @@ The generic implementation of course is required to be semantic preserving for a
 
 In general this rule introduces a fair number of redundant operators.
 The worst perpetrator of this is an operator called \texttt{identity} which is used to preserve destructuring in fetches on if branches.
-When two fetches which were on different branches of the same if are merged together it may be that one of the fetches had its return be destructured differently than the other.
+When two fetches which were on different branches of the same if are merged it may be that one of the fetches had its return be destructured differently than the other.
 If this is the case the (IR) returns of those ifs cannot be unified.
 Therefore a new binding is added leading from the combined fetch to two \texttt{identity} operators.
 Each of the \texttt{identity} operators is destructured like one of the former two fetches and wired to the same subsequent nodes respectively.
@@ -50,7 +48,7 @@ This means the overall transformation is divided into three steps
     \item \textbf{Optimisations.} Clean up the graph, remove redundant operators.
 \end{enumerate}
 
-Optimisations of this kind are very high level.
+Optimisations of this kind are high level.
 They operate entirely on the dataflow IR and only concern themselves with \yauhau{} and Ohua internal operators.
 Optimisations are repeated until the graph does not change anymore.
 
@@ -81,6 +79,7 @@ Specifically if the output of an identity operator is not destructured then ther
         \caption{Optimised flow}
         \label{fig:redundant-identity-example-rewritten}
     \end{subfigure}
+    \caption{Optimising \tettt{identity} operators}
 
 \end{figure}
 

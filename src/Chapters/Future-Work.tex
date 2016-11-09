@@ -3,7 +3,7 @@
 
 \label{ch:future-work}
 
-With the introduction of contexts and exploration of their properties I was able to create a generalised and extensible unifying context unwinding algorithm for preparing graphs for the \yauhau{} transformation.
+With the introduction of contexts and exploration of their properties I was able to create a generalised and extedable unifying context unwinding algorithm for preparing graphs for the \yauhau{} transformation.
 Should a new context structure be added to Ohua the unified unwinding algorithm can be extended by providing a rewrite for only level of the new context.
 
 A new graph rewrite for automatically introducing necessary \texttt{seq} operators into a program with side effects allows \yauhau{} programs with intuitive side effects in the form of writes to a datasource.
@@ -30,7 +30,7 @@ This subgraph batching could also be used to help \yauhau{} to deal with cyclic 
 
 \section{Pattern based code generation}
 
-In the process of generating the code for the experiments, especially \ifop{}, it became apparent that it is very desirable to create random code with specific characteristics and patterns.
+In the process of generating the code for the experiments, especially \ifop{}, it became apparent that it is desirable to create random code with specific characteristics and patterns.
 In the particular case of the if experiment it would be desirable to create nodes where branches are either precomputed or on the branch.
 Currently this needs to be hardcoded in the generator and switched via a command line parameter.
 For future work there should be a way to define ad hoc patterns for how a node, or perhaps even whole subgraphs matching certain requirements should be serialised.

@@ -57,6 +57,8 @@ We then change the type, and therefore the behaviour of those nodes, in two ways
       \caption{Number of rounds performed with maps enabled}
       \label{fig:smap-experiment}
   \end{subfigure}
+
+  \caption{Influence of mapping operations}
 \end{figure}
 
 For each node the invoked function and the mapped function are identical in both configurations, only the number of invocations changes.
@@ -83,7 +85,6 @@ In fact that is the reason why the graph serialisation in the code generator use
 It does not inquire how many other nodes depend on the result of this calculation and hence obtains no knowledge of whether it is safe to move the computation onto the if branch itself.
 
 \begin{figure}[h]
-\begin{subfigure}{\textwidth}
 \begin{minted}{Haskell}
 do
   (val1, val2) <- (,) <$> computation ... <*> computation ...
@@ -91,8 +92,6 @@ do
 \end{minted}
 \caption{Generated conditional code for Haxl}
 \label{fig:generated-conditional-haxl}
-\end{subfigure}
-
 \end{figure}
 
 
@@ -103,7 +102,7 @@ do
       val2 (computation ...)]
   (if condition val1 val2))
 \end{minted}
-  \caption{Generated conditional code for Yauhau}
+  \caption{Clojure representation}
   \label{fig:generated-conditional-yauhau}
   \end{subfigure}
   \begin{subfigure}[b]{0.5\textwidth}
@@ -111,6 +110,8 @@ do
     \caption{Graph representation}
     \label{fig:if-graph-actual}
   \end{subfigure}
+
+  \caption{Generated conditional code for Yauhau}
 \end{figure}
 
 \begin{figure}
@@ -129,9 +130,10 @@ do
     \caption{Conditionals as hypothesised}
     \label{fig:if-graph-hypothesised}
   \end{subfigure}
+  \caption{Representation of conditionals}
 \end{figure}
 
-The code generated for \yauhau{}, see Figure~\ref{fig:generated-conditional-yauhau} gets translated into a dataflow graph with very similar semantics to those of Haxl.
+The code generated for \yauhau{}, see Figure~\ref{fig:generated-conditional-yauhau} gets translated into a dataflow graph with similar semantics to those of Haxl.
 A visual representation of this can be seen in Figure~\ref{fig:if-graph-actual}.
 
 As an example we will take the program from Figure~\ref{fig:generated-conditional-yauhau}.
@@ -161,14 +163,15 @@ It turns out that, when performing batching transformations, like we do, moving 
 \begin{figure}[h]
   \begin{subfigure}{\textwidth}
       \includegraphics[width=\linewidth]{../Figures/if-experiment.eps}
-      \caption{Round difference}
+      \caption{Absolute}
       \label{fig:if-experiment}
   \end{subfigure}
   \begin{subfigure}{\textwidth}
     \includegraphics[width=\textwidth]{../Figures/if-experiment-prct.eps}
-    \caption{Round difference in percent}
+    \caption{In percent}
     \label{fig:if-experiment-prct}
   \end{subfigure}
+  \caption{Round difference with precomputed conditionals}
 \end{figure}
 
 We have made amendments to the code generator to enable us to produce both types of graph, see Section~\ref{sec:extend-conditionals}.
@@ -195,7 +198,7 @@ Fewer rounds of I/O generally reduces the execution time for the program.
 
 Consider a simple example (Figure~\ref{fig:requests-on-branches}) where we have a regular conditional statement and depending on the result of the computation one request.
 Consider how this program would be batched.
-The requests on the branches depend on the the evaluation of the condition and the condition depends on the data from \texttt{request0}, see also Figure~\ref{fig:requests-on-branches-graph}.
+The requests on the branches depend on the the evaluation of the condition which in turn depends on the data from \texttt{request0}, see also Figure~\ref{fig:requests-on-branches-graph}.
 Fetch rounds are indicated by the blue, dashed rectangle.
 As a result we would end up with two fetch rounds.
 One for the request before the conditional and one for either the request from the true branch or the false branch.
@@ -203,7 +206,7 @@ One for the request before the conditional and one for either the request from t
 In this case we see that we are performing two actions where we might only have to perform one action.
 If we can, as previously mentioned, consider the fetches and computations as pure, we can rewrite the program to perform the conditional fetches \textbf{before} evaluating the condition (See Figure~\ref{fig:requests-precomputed}), which allows it to be batched with the first request, since the two fetches now do not depend on the condition anymore, See Figure~\ref{fig:requests-precomputed-graph}.
 The round again indicated by the blue, dashed rectangle.
-In particular if the fetch round before already includes a request to \texttt{source2} as well, then after our rewrite we get all the data from the entire second round for free.
+In particular if the fetch round before already includes a request to \texttt{source2} as well, then after our rewrite we get all the data from the entire second round in the first.
 For pure computations this will be semantically identical even though it performs redundant computation.
 
 \begin{figure}[h]
@@ -231,6 +234,7 @@ For pure computations this will be semantically identical even though it perform
     \caption{Request on branches as graph}
     \label{fig:requests-on-branches-graph}
   \end{subfigure}
+  \caption{Precompute transformation}
 \end{figure}
 
 \begin{figure}[h]
@@ -268,6 +272,7 @@ Note that this is not limited to fetches on the critical fetch path of the origi
     \label{fig:rewrite-crit-path}
   \end{subfigure}
 
+  \caption{Effect of the critical path}
 \end{figure}
 
 %

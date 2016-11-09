@@ -7,7 +7,7 @@ Structures such as \smap{} and \ifop{}, which alter control flow are not compati
 In the preceding Chapters we have learned how both these structures may be altered individually to extract a particular node from them.
 However these structures do not occur exclusively independent, rather they may be nested into one another in arbitrary fashion.
 The transformations as described in the previous chapters are only able to extract selected nodes from one particular, single layer of one of these structures.
-I.e. the \smap{} transformation\footnote{A slightly modified version of the transformation} moves all fetch nodes from one \smap{} into next next outer layer.
+I.e. the \smap{} transformation\footnote{A slightly modified version of the transformation} moves all fetch nodes from one \smap{} into the next outer layer.
 
 When designing the unified control flow rewrite I realised however that as long as one possesses a rewrite for each type structure which extracts nodes from exactly one level we can build an algorithm which uses these individual rewrites to extract \emph{all} nodes from \emph{all} contexts in a semantics preserving way.
 
@@ -38,7 +38,7 @@ When designing the unified control flow rewrite I realised however that as long 
 
 \section{Definition}
 
-But first, in order to talk about structures such as \smap{} and \ifop{}, in particular for the purposes of out unified extraction algorithm we introduce a new concept to Ohua called \emph{context}.
+In order to talk about structures such as \smap{} and \ifop{}, in particular for the purposes of our unified extraction algorithm we introduce a new concept to Ohua called \emph{context}.
 \emph{Contexts} are a much broader concept than just \ifop{} and \smap{} but this is where the idea first emerged.
 Contexts now solve an issue emerging from the internal representation of the program.
 The information in a dataflow graphs is limited to data dependencies and derivable properties.
@@ -56,7 +56,7 @@ The type of enter and exit nodes determines the behaviour of the context itself.
 \subsection{The stack}
 
 A context stack $S(n)$ is a ordered list of nested contexts a node is contained in.
-Following I will sometimes speak of a context and sometimes of a context stack.
+In the following paragraphs I will sometimes speak of a context and sometimes of a context stack.
 Both are equivalent, since every context can be uniquely associated with a context stack and vice versa.
 The context associated with a stack $s$ is the topmost context of $s$.
 The stack associated with a context $c$ is the context stack of its exit node.
@@ -129,11 +129,10 @@ Contexts are special in Ohua because as of yet they are exclusively builtin and 
 
 \section{Detection}
 
-\subsection{Previous}
+\subsection{IR Based}
 
-The detection algorithm for contexts went through several iterations.
-Originally the context detection was performed only in \yauhau{} as contexts seemed only useful when unwinding them to prepare the batching transformation.
-The former detection algorithm employed a strategy whereby the graph would be traversed in topological order.
+There are mutliple ways of detecting the context at various stages of the compiler
+This algorithm employes a strategy whereby the IR graph would be traversed in topological order.
 Each nodes context would be calculated from the maximal context out of the contexts from the preceding nodes (see inheritance property).
 Maximal context here means the most deeply nested (see full enclosure property).
 Then depending on the type of node this context stack would be transformed.
@@ -147,11 +146,11 @@ Then depending on the type of node this context stack would be transformed.
 
 The node would then be labeled with the transformed context stack.
 
-\subsection{Current}
+\subsection{Source based}
 
-After the detection moved into the Ohua project the site of context detection was moved as well.
-Additionally new types of context are now recognised, such as \texttt{algo} and \texttt{seq}.
-Context detection in Ohua is now done right when the Clojure code is being transformed into the IR, see Figure~\ref{fig:ohua-compiler-flow-with-ctx}.
+Alternatively context detection can be performed during the AST traversals on the source code.
+This subgraphs of the context are now easier to find as they are just a subtree in the AST.
+Currently in Ohua context detection is done on the AST, when the Clojure code is being transformed into the IR, see Figure~\ref{fig:ohua-compiler-flow-with-ctx}.
 
 \begin{figure}
   \includegraphics[width=\textwidth]{ohua-compiler-flow-with-ctx}
