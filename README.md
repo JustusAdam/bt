@@ -8,7 +8,7 @@ You can download the sources and build it, but if you only wish to look at the p
 
 Because I like Haskell and I've always wanted to try the build system `shake` building this requires the following programs be installed:
 
-- A LaTeX distribution including `pdflatex`
+- A LaTeX distribution including `latexmk`
 - The Haskell tool `stack`
 
 The libraries used are automatically installed by stack if you run `stack install`.
