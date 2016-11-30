@@ -2,6 +2,8 @@
 
 This repository contains the LaTeX sources for what will become my bachelor thesis.
 
+You can download the sources and build it, but if you only wish to look at the paper itself you can simply refer to the prebuilt versions in `built/<version>`.
+
 ## Building
 
 Because I like Haskell and I've always wanted to try the build system `shake` building this requires the following programs be installed:
@@ -10,7 +12,7 @@ Because I like Haskell and I've always wanted to try the build system `shake` bu
 - The Haskell tool `stack`
 
 The libraries used are automatically installed by stack if you run `stack install`.
-You can then build the thesis by running `stack exec -- bt`.
+You can then build the thesis by running `bt`.
 
 ### Preview
 
