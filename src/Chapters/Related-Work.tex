@@ -32,7 +32,7 @@ After the round finishes executing and the results are present the paths are res
 A very simple example can be seen in Figure~\ref{fig:haxl-basic-example}.
 Additionally all requests are cached for a run of the Haxl program.
 
-In the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016} we criticise how the benefits of the Haxl framework require use of special functor operations, such as lifting the \texttt{intersection} operation into the Functor with \texttt{pure} and applying the arguments with \texttt{<*>}.
+In our project Ÿauhau we criticise how the benefits of the Haxl framework require use of special functor operations, such as lifting the \texttt{intersection} operation into the Functor with \texttt{pure} and applying the arguments with \texttt{<*>}.
 It is much more difficult writing this kind of code than the obvious and straight forward monadic code from Figure~\ref{fig:monadic-common-friends}.
 For small examples adopting this alternative style is not as difficult, but as programs gets larger and more complicated the complexity of maintaining this particular style of writing code increases.
 

@@ -4,7 +4,6 @@
 \label{ch:Yauhau}
 
 \yauhau{} is a plugin for the Ohua compiler.
-It was first introduced in the paper ``Ÿauhau: Concise Code and Efficient I/O Straight from Dataflow.''~\cite{ErtelGoensAdamEtAl2016}, where a more detailed account of the motivation, implementation and results may be found.
 Following I will briefly outline the basic transformation in \yauhau{} which is necessary to understand the arising problems which I am solving in the Chapters following.
 
 \yauhau{} hooks into the compiler after the Clojure source has been parsed and transformed into the dataflow IR.
@@ -227,7 +226,7 @@ An accumulator is inserted with the combined inputs of all fetch nodes and the c
 
 \begin{figure}{h}
     \includegr{yauhau-transformation}
-	\caption{Base transformation (taken from our paper\cite{ErtelGoensAdamEtAl2016})}
+	\caption{Base transformation}
 	\label{fig:yauhau-transformation}
 \end{figure}
 
